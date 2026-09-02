@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus School - ระบบจัดการกิจกรรมโรงเรียน (Online)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Kanit', sans-serif; scroll-behavior: smooth; }
+        .status-pending { background-color: #fefce8; color: #854d0e; border: 1px solid #fef08a; }
+        .status-approved { background-color: #f0fdf4; color: #166534; font-weight: bold; border: 1px solid #bbf7d0; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        #custom-confirm-modal {
+            background-color: rgba(0, 0, 0, 0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #fbbf24; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-5 right-5 z-[10000] transform translate-y-[-150%] transition-transform duration-300 bg-white border-l-4 border-green-500 shadow-2xl p-4 rounded-xl hidden">
+        <div class="flex items-center gap-3">
+            <div id="toast-icon" class="text-green-500">
+                <svg id="toast-svg" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <div>
+                <p id="toast-message" class="text-gray-800 font-medium"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="custom-confirm-modal" class="fixed inset-0 p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-8 shadow-2xl transform scale-95 transition-transform duration-200" id="modal-box">
+            <div class="text-orange-500 mb-4 bg-orange-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 text-center mb-2" id="modal-title">ยืนยัน?</h3>
+            <p class="text-gray-500 text-center mb-8" id="modal-desc">ข้อมูลจะถูกลบออกถาวร</p>
+            <div class="flex gap-3">
+                <button id="confirm-cancel" class="flex-1 py-3 rounded-2xl border border-gray-200 font-medium text-gray-500 hover:bg-gray-50 transition">ยกเลิก</button>
+                <button id="confirm-ok" class="flex-1 py-3 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 transition shadow-lg">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="bg-green-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition" onclick="goHome()">
+                <div class="bg-yellow-400 p-2 rounded-xl shadow-inner text-green-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
+                </div>
+                <span class="text-xl font-bold tracking-tight uppercase">โรงเรียน รัตนโกสินทร์สมโภชบางเขน <span class="text-xs bg-white text-green-700 px-1 rounded ml-1">Cloud</span></span>
+            </div>
+            <div id="role-tag" class="hidden bg-green-700/50 border border-green-400/30 px-4 py-1.5 rounded-full text-[13px] font-medium flex items-center gap-2">
+                บทบาท: <span id="current-role-text">-</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Selection & Forms -->
+    <div id="login-section" class="max-w-md mx-auto mt-20 p-10 bg-white rounded-[2rem] shadow-xl border border-gray-100 fade-in">
+        <div id="db-status" class="text-center text-xs text-yellow-500 mb-4 font-bold animate-pulse">กำลังเชื่อมต่อฐานข้อมูล...</div>
+        
+        <!-- Role Selection -->
+        <div id="role-selection">
+            <h2 class="text-2xl font-bold mb-2 text-gray-800 text-center">เข้าสู่ระบบ</h2>
+            <p class="text-gray-400 mb-10 text-sm text-center">ยินดีต้อนรับ</p>
+            <div class="space-y-4">
+                <button onclick="showAdminLogin()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-2xl transition shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    เจ้าหน้าที่ (Admin)
+                </button>
+                <button onclick="switchRole('parent')" class="w-full bg-white border-2 border-yellow-400 text-green-700 hover:bg-yellow-50 font-bold py-4 rounded-2xl transition active:scale-95 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    ผู้ปกครอง (User)
+                </button>
+            </div>
+        </div>
+
+        <!-- Admin Login Form -->
+        <div id="admin-login-form" class="hidden">
+            <button onclick="hideAdminLogin()" class="text-green-600 font-bold text-sm mb-6 flex items-center gap-1 hover:underline">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                ย้อนกลับ
+            </button>
+            <h2 class="text-xl font-bold mb-2 text-gray-800 text-center">Login เจ้าหน้าที่</h2>
+            <form id="auth-form" class="space-y-5 mt-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">อีเมล</label>
+                    <input type="email" id="login-email" required class="w-full border-gray-100 bg-gray-50 border-2 p-4 rounded-2xl focus:border-green-500 outline-none" placeholder="admin@focus.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">รหัสผ่าน</label>
+                    <input type="password" id="login-password" required class="w-full border-gray-100 bg-gray-50 border-2 p-4 rounded-2xl focus:border-green-500 outline-none" placeholder="••••••">
+                </div>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-2xl transition shadow-lg mt-2">เข้าสู่ระบบ</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content" class="hidden flex-grow max-w-6xl mx-auto w-full p-4 sm:p-6 fade-in">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 border-b border-gray-200 pb-6">
+            <h1 id="page-title" class="text-2xl font-bold text-gray-800 tracking-tight">Focus School Dashboard</h1>
+            <div class="flex gap-2">
+                <!-- Export Button (Admin Only) -->
+                <button id="export-btn" onclick="exportToCSV()" class="hidden text-green-600 font-bold flex items-center gap-2 bg-green-50 px-5 py-2 rounded-xl hover:bg-green-100 transition text-sm border border-green-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    Export CSV
+                </button>
+                <button onclick="goHome()" class="text-red-500 font-bold flex items-center gap-2 bg-red-50 px-5 py-2 rounded-xl hover:bg-red-100 transition text-sm">
+                    ออกจากระบบ
+                </button>
+            </div>
+        </div>
+
+        <!-- ADMIN VIEW -->
+        <div id="admin-view" class="hidden space-y-10 pb-20">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- กิจกรรม -->
+                <section class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold mb-6 text-green-700">ประกาศกิจกรรมใหม่</h3>
+                    <form id="activity-form" class="space-y-4">
+                        <div class="relative w-full h-32 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer group hover:bg-white transition">
+                            <input type="file" id="act-image-input" accept="image/*" class="absolute inset-0 opacity-0 z-10 cursor-pointer">
+                            <img id="image-preview" class="hidden absolute inset-0 w-full h-full object-cover">
+                            <div id="upload-placeholder" class="text-center text-gray-400 text-xs font-bold uppercase tracking-wider px-4">
+                                <p>คลิกที่นี่เพื่ออัปโหลดรูปภาพกิจกรรม</p>
+                            </div>
+                        </div>
+                        <input type="text" id="act-name" required class="w-full border-gray-100 bg-gray-50 border-2 p-4 rounded-2xl focus:border-green-500 outline-none" placeholder="ชื่อกิจกรรม">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="date" id="act-date" required class="w-full border-gray-100 bg-gray-50 border-2 p-4 rounded-2xl focus:border-green-500 outline-none">
+                            <input type="number" id="act-limit" required min="1" class="w-full border-gray-100 bg-gray-50 border-2 p-4 rounded-2xl focus:border-green-500 outline-none" placeholder="จำนวนที่เปิดรับ">
+                        </div>
+                        <button type="submit" class="w-full bg-yellow-400 hover:bg-yellow-500 text-green-900 font-bold py-4 rounded-2xl transition shadow-md">ลงประกาศขึ้นระบบ</button>
+                    </form>
+                </section>
+
+                <!-- จัดการ Admin -->
+                <section class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold mb-6 text-blue-700">จัดการเจ้าหน้าที่</h3>
+                    <form id="add-admin-form" class="bg-blue-50/50 p-4 rounded-2xl mb-6 space-y-3 border border-blue-100">
+                        <input type="email" id="new-admin-email" required placeholder="อีเมลใหม่" class="w-full p-3 rounded-xl border-gray-200 border outline-none text-sm">
+                        <input type="password" id="new-admin-pass" required placeholder="รหัสผ่าน" class="w-full p-3 rounded-xl border-gray-200 border outline-none text-sm">
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-xl font-bold text-xs hover:bg-blue-700 transition">เพิ่มรายชื่อเจ้าหน้าที่</button>
+                    </form>
+                    <div class="max-h-40 overflow-y-auto custom-scrollbar">
+                        <ul id="admin-list-container" class="space-y-2"></ul>
+                    </div>
+                </section>
+            </div>
+
+            <!-- กิจกรรม & ลงทะเบียน -->
+            <div class="grid grid-cols-1 gap-10">
+                <section class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <h3 class="text-lg font-bold mb-6 text-gray-800">จัดการกิจกรรมทั้งหมด</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-xs text-gray-400 uppercase tracking-wider font-bold">
+                                <tr><th class="p-4">กิจกรรม</th><th class="p-4">วันที่จัด</th><th class="p-4">จำนวนที่รับ</th><th class="p-4 text-center">จัดการ</th></tr>
+                            </thead>
+                            <tbody id="admin-activity-list" class="divide-y divide-gray-50 text-sm"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <h3 class="text-lg font-bold text-orange-600">ตรวจสอบการลงทะเบียน (Real-time)</h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-bold text-gray-500">กรองระดับชั้น:</label>
+                            <select id="admin-filter-level" onchange="renderAdminView()" class="bg-orange-50 text-orange-800 text-sm font-bold py-2 px-4 rounded-xl border border-orange-100 focus:outline-none cursor-pointer">
+                                <option value="all">ทั้งหมด</option>
+                                <option value="มัธยม 1">มัธยม 1</option>
+                                <option value="มัธยม 2">มัธยม 2</option>
+                                <option value="มัธยม 3">มัธยม 3</option>
+                                <option value="มัธยม 4">มัธยม 4</option>
+                                <option value="มัธยม 5">มัธยม 5</option>
+                                <option value="มัธยม 6">มัธยม 6</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-xs text-gray-400 uppercase tracking-wider font-bold">
+                                <tr>
+                                    <th class="p-4">ผู้ปกครอง</th>
+                                    <th class="p-4">ชั้นเรียน</th>
+                                    <th class="p-4">กิจกรรม</th>
+                                    <th class="p-4">สถานะ</th>
+                                    <th class="p-4 text-center">ดำเนินการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-reg-list" class="divide-y divide-gray-50 text-sm"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- PARENT VIEW -->
+        <div id="parent-view" class="hidden space-y-10">
+            <!-- ข้อมูลผู้ลงทะเบียน -->
+            <section class="bg-white p-8 rounded-3xl border-2 border-yellow-100 shadow-sm">
+                <h3 class="font-bold text-green-800 mb-6 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    ระบุข้อมูลของนักเรียน
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-1">
+                        <label class="block text-sm font-bold text-gray-600 mb-2">ชื่อ-นามสกุลผู้ปกครอง:</label>
+                        <!-- Datalist Autocomplete -->
+                        <input type="text" id="parent-name-input" list="saved-names-list" oninput="updateParentSession()" class="w-full border-gray-100 bg-gray-50 border-2 p-4 rounded-2xl focus:border-green-500 outline-none transition font-medium" placeholder="พิมพ์ชื่อ หรือคลิกเพื่อเลือก">
+                        <datalist id="saved-names-list"></datalist>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">ระดับชั้น:</label>
+                        <select id="parent-level-input" onchange="updateParentSession()" class="w-full border-gray-100 bg-gray-50 border-2 p-4 rounded-2xl focus:border-green-500 outline-none appearance-none cursor-pointer">
+                            <option value="มัธยม 1">มัธยม 1</option>
+                            <option value="มัธยม 2">มัธยม 2</option>
+                            <option value="มัธยม 3">มัธยม 3</option>
+                            <option value="มัธยม 4">มัธยม 4</option>
+                            <option value="มัธยม 5">มัธยม 5</option>
+                            <option value="มัธยม 6">มัธยม 6</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">ห้องเรียน (1-11):</label>
+                        <select id="parent-room-input" onchange="updateParentSession()" class="w-full border-gray-100 bg-gray-50 border-2 p-4 rounded-2xl focus:border-green-500 outline-none appearance-none cursor-pointer">
+                            <!-- JS Generates 1-11 -->
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- รายการกิจกรรม -->
+            <section>
+                <h3 class="text-xl font-bold text-gray-800 mb-8 flex items-center gap-3">
+                    <span class="bg-yellow-400 p-2 rounded-xl shadow-md">📢</span> 
+                    กิจกรรมเปิดรับสมัคร
+                </h3>
+                <div id="activity-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+            </section>
+            
+            <section class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold mb-6 text-gray-800">ประวัติและสถานะการลงทะเบียนของคุณ</h3>
+                <div id="parent-reg-list" class="space-y-4"></div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="mt-auto py-12 bg-white border-t border-gray-100 text-gray-400 text-center text-[11px] font-medium">
+        <div class="max-w-6xl mx-auto px-4">
+            <p class="text-green-700 font-bold mb-2 uppercase tracking-widest">Focus School App</p>
+            <p>ผู้พัฒนา: นายธีระดิษฐ์ คนซื่อ และ นายอลัน ตันสมรส | สาขาคอมพิวเตอร์ศึกษา มรภ.พระนคร</p>
+        </div>
+    </footer>
+
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, doc, deleteDoc, updateDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Local State
+        let activities = [];
+        let registrations = [];
+        let admins = [{ email: 'admin@focus.com', pass: '123456' }]; // Default Mock
+        
+        let currentRole = null;
+        let sessionParentName = "";
+        let sessionLevel = "มัธยม 1";
+        let sessionRoom = "1";
+        let pendingDeleteFn = null;
+        let base64Image = "";
+        let user = null;
+
+        let db = null;
+        let appId = "default-app-id";
+        let isFirebaseActive = false;
+
+        // --- Init Auth & Database ---
+        async function initApp() {
+            try {
+                if (typeof __firebase_config !== 'undefined') {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    const auth = getAuth(app);
+                    db = getFirestore(app);
+                    appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    isFirebaseActive = true;
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, (u) => {
+                        if (u) {
+                            user = u;
+                            document.getElementById('db-status').textContent = "เชื่อมต่อฐานข้อมูล Cloud สำเร็จ ✅";
+                            document.getElementById('db-status').className = "text-center text-xs text-green-500 mb-4 font-bold";
+                            setupListeners();
+                        }
+                    });
+                } else {
+                    throw new Error("No config");
+                }
+            } catch (error) {
+                console.warn("Offline Mode");
+                document.getElementById('db-status').textContent = "โหมดใช้งานปกติ (ออฟไลน์)";
+                document.getElementById('db-status').className = "text-center text-xs text-orange-500 mb-4 font-bold";
+                isFirebaseActive = false;
+                user = { uid: "local-user" }; // mock user
+            }
+        }
+
+        function setupListeners() {
+            if (!isFirebaseActive) return;
+            // Admins
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'admins'), (snapshot) => {
+                admins = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                if(admins.length === 0) {
+                    addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'admins'), {email: 'admin@focus.com', pass: '123456'});
+                }
+                if(currentRole === 'admin') renderAdminView();
+            });
+
+            // Activities
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'activities'), (snapshot) => {
+                activities = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                if(currentRole === 'admin') renderAdminView();
+                if(currentRole === 'parent') renderParentView();
+            });
+
+            // Registrations
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'registrations'), (snapshot) => {
+                registrations = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                updateDatalist();
+                if(currentRole === 'admin') renderAdminView();
+                if(currentRole === 'parent') renderParentView();
+            });
+        }
+
+        // --- Navigation & UI ---
+        window.goHome = () => {
+            currentRole = null;
+            window.hideAdminLogin();
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('role-selection').classList.remove('hidden');
+            document.getElementById('main-content').classList.add('hidden');
+            document.getElementById('role-tag').classList.add('hidden');
+            document.getElementById('export-btn').classList.add('hidden');
+            window.scrollTo(0,0);
+        };
+        
+        window.logout = window.goHome;
+
+        window.showAdminLogin = () => {
+            document.getElementById('role-selection').classList.add('hidden');
+            document.getElementById('admin-login-form').classList.remove('hidden');
+        };
+
+        window.hideAdminLogin = () => {
+            document.getElementById('role-selection').classList.remove('hidden');
+            document.getElementById('admin-login-form').classList.add('hidden');
+        };
+
+        window.switchRole = (role) => {
+            currentRole = role;
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+            document.getElementById('role-tag').classList.remove('hidden');
+            document.getElementById('current-role-text').textContent = role === 'admin' ? 'เจ้าหน้าที่' : 'ผู้ปกครอง';
+            
+            if (role === 'admin') {
+                document.getElementById('admin-view').classList.remove('hidden');
+                document.getElementById('parent-view').classList.add('hidden');
+                document.getElementById('export-btn').classList.remove('hidden');
+                renderAdminView();
+            } else {
+                document.getElementById('admin-view').classList.add('hidden');
+                document.getElementById('parent-view').classList.remove('hidden');
+                document.getElementById('export-btn').classList.add('hidden');
+                renderParentView();
+            }
+            window.scrollTo(0,0);
+        };
+
+        function updateDatalist() {
+            const datalist = document.getElementById('saved-names-list');
+            if(!datalist) return;
+            const uniqueNames = [...new Set(registrations.map(r => r.parentName))].filter(n => n && n.trim() !== "");
+            datalist.innerHTML = uniqueNames.map(name => `<option value="${name}">`).join('');
+        }
+
+        // --- Form Submissions ---
+        document.getElementById('auth-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim().toLowerCase();
+            const pass = document.getElementById('login-password').value;
+            const foundAdmin = admins.find(a => a.email.toLowerCase() === email && a.pass === pass);
+
+            if (foundAdmin) {
+                switchRole('admin');
+                showToast("ยินดีต้อนรับเข้าสู่ระบบ");
+                e.target.reset();
+            } else {
+                showToast("❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง", "error");
+            }
+        });
+
+        document.getElementById('add-admin-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('new-admin-email').value.trim();
+            const pass = document.getElementById('new-admin-pass').value.trim();
+            if(admins.some(a => a.email === email)) { showToast("❌ อีเมลนี้ซ้ำ", "error"); return; }
+            
+            if (isFirebaseActive && user) {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'admins'), { email, pass });
+            } else {
+                admins.push({ id: Date.now().toString(), email, pass });
+                renderAdminView();
+            }
+            e.target.reset();
+            showToast("เพิ่มเจ้าหน้าที่สำเร็จ");
+        });
+
+        document.getElementById('activity-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newAct = {
+                name: document.getElementById('act-name').value.trim(),
+                date: document.getElementById('act-date').value,
+                limit: parseInt(document.getElementById('act-limit').value, 10),
+                image: base64Image,
+                createdAt: Date.now()
+            };
+
+            if (isFirebaseActive && user) {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'activities'), newAct);
+            } else {
+                newAct.id = Date.now().toString();
+                activities.push(newAct);
+                renderAdminView();
+            }
+
+            e.target.reset();
+            base64Image = ""; 
+            document.getElementById('image-preview').classList.add('hidden');
+            document.getElementById('upload-placeholder').classList.remove('hidden');
+            showToast("ลงประกาศเรียบร้อย ✨");
+        });
+
+        // --- Global Methods for HTML attributes ---
+        window.removeAdmin = async (adminId, email) => {
+            if (admins.length <= 1) { showToast("❌ ลบบัญชีสุดท้ายไม่ได้", "error"); return; }
+            askConfirm("ลบบัญชี?", "ลบสิทธิ์การเข้าถึงของ " + email, async () => {
+                if (isFirebaseActive && user && adminId) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'admins', adminId));
+                } else {
+                    admins = admins.filter(a => a.email !== email);
+                    renderAdminView();
+                }
+                showToast("ลบแล้ว");
+            });
+        };
+
+        window.deleteActivity = async (actId) => {
+            askConfirm("ลบกิจกรรม?", "ลบถาวรรวมถึงรายชื่อผู้สมัคร", async () => {
+                if (isFirebaseActive && user) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'activities', actId));
+                    const relatedRegs = registrations.filter(r => r.activityId === actId);
+                    relatedRegs.forEach(async r => {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registrations', r.id));
+                    });
+                } else {
+                    activities = activities.filter(a => String(a.id) !== String(actId));
+                    registrations = registrations.filter(r => String(r.activityId) !== String(actId));
+                    renderAdminView();
+                }
+                showToast("ลบสำเร็จ");
+            });
+        };
+
+        window.approveRegistration = async (regId) => {
+            const reg = registrations.find(r => r.id === regId || r.id === String(regId));
+            if (!reg) return;
+            const act = activities.find(a => a.id === reg.activityId);
+            if (!act) return;
+            
+            const approvedCount = registrations.filter(r => r.activityId === reg.activityId && r.status === 'approved').length;
+            if (approvedCount >= parseInt(act.limit)) {
+                showToast("❌ ไม่สามารถอนุมัติได้ กิจกรรมนี้รับครบตามจำนวนแล้ว", "error");
+                return;
+            }
+
+            if (isFirebaseActive && user) {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registrations', regId), { status: 'approved' });
+            } else {
+                reg.status = 'approved';
+                renderAdminView();
+            }
+            showToast("อนุมัติสำเร็จ ✓");
+        };
+
+        window.deleteRegistration = async (regId) => {
+            askConfirm("ยกเลิกรายการ?", "ยืนยันการลบข้อมูลนี้", async () => {
+                if (isFirebaseActive && user) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registrations', regId));
+                } else {
+                    registrations = registrations.filter(r => String(r.id) !== String(regId));
+                    if (currentRole === 'admin') renderAdminView(); else renderParentView();
+                }
+                showToast("ยกเลิกเรียบร้อย");
+            });
+        };
+
+        window.register = async (actId, actName, isFull) => {
+            if(isFull) { showToast("❌ กิจกรรมนี้ที่นั่งเต็มแล้ว", "error"); return; }
+            
+            const act = activities.find(a => a.id === actId);
+            if(act) {
+                const totalRegCount = registrations.filter(r => r.activityId === actId).length;
+                if (totalRegCount >= parseInt(act.limit)) {
+                    showToast("❌ กิจกรรมนี้มีผู้ลงทะเบียนครบจำนวนแล้ว", "error");
+                    return;
+                }
+            }
+
+            if(!sessionParentName) { showToast("❌ โปรดระบุชื่อผู้ปกครอง", "error"); document.getElementById('parent-name-input').focus(); return; }
+            
+            const classroomInfo = sessionLevel + " (ห้อง " + sessionRoom + ")";
+            
+            if(registrations.some(r => r.activityId === actId && r.parentName === sessionParentName && r.classroom === classroomInfo)) { 
+                showToast("ท่านได้ลงทะเบียนกิจกรรมนี้ไปแล้ว"); 
+                return; 
+            }
+
+            const newReg = {
+                parentName: sessionParentName, 
+                classroom: classroomInfo,
+                activityId: actId, 
+                activityName: actName, 
+                status: 'pending',
+                createdAt: Date.now()
+            };
+
+            if (isFirebaseActive && user) {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'registrations'), newReg);
+            } else {
+                newReg.id = Date.now().toString();
+                registrations.push(newReg);
+                updateDatalist();
+                renderParentView();
+            }
+            showToast("ลงทะเบียนสำเร็จแล้ว ✅");
+        };
+
+        window.exportToCSV = () => {
+            if(registrations.length === 0) { showToast("ไม่มีข้อมูลให้ Export", "error"); return; }
+            // Use BOM so Excel reads UTF-8 correctly
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "ชื่อผู้ปกครอง,ชั้นเรียน,กิจกรรม,สถานะ\n"; 
+            registrations.forEach(row => {
+                let rowStr = `"${row.parentName}","${row.classroom}","${row.activityName}","${row.status === 'approved' ? 'อนุมัติแล้ว' : 'รอตรวจสอบ'}"`;
+                csvContent += rowStr + "\n";
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "focus_school_registrations.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("ดาวน์โหลดไฟล์ CSV สำเร็จ");
+        };
+
+        // --- UI Rendering ---
+        window.updateParentSession = () => {
+            sessionParentName = document.getElementById('parent-name-input').value.trim();
+            sessionLevel = document.getElementById('parent-level-input').value;
+            sessionRoom = document.getElementById('parent-room-input').value;
+            renderParentView();
+        };
+
+        window.renderAdminView = () => {
+            const adminList = document.getElementById('admin-list-container');
+            adminList.innerHTML = admins.map(a => `
+                <li class="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 text-[11px] shadow-sm">
+                    <span class="font-bold text-blue-800 tracking-tight">${a.email}</span>
+                    <button onclick="removeAdmin('${a.id}', '${a.email}')" class="text-red-400 font-bold hover:text-red-600">ลบ</button>
+                </li>
+            `).join('');
+
+            const actList = document.getElementById('admin-activity-list');
+            actList.innerHTML = activities.length > 0 ? activities.map(act => {
+                const actLimit = parseInt(act.limit) || 0;
+                const approvedCount = registrations.filter(r => r.activityId === act.id && r.status === 'approved').length;
+                const totalRegCount = registrations.filter(r => r.activityId === act.id).length;
+                return `
+                <tr class="hover:bg-gray-50 border-b">
+                    <td class="p-4 flex items-center gap-3">
+                        ${act.image ? `<img src="${act.image}" class="w-10 h-10 rounded object-cover shadow-sm">` : '<div class="w-10 h-10 bg-gray-200 rounded flex-shrink-0"></div>'}
+                        <span class="font-bold text-gray-800">${act.name}</span>
+                    </td>
+                    <td class="p-4 font-medium text-gray-500">${act.date}</td>
+                    <td class="p-4">
+                        <div class="text-gray-500 font-medium">รับ ${actLimit} | สมัครแล้ว ${totalRegCount}</div>
+                        <div class="text-xs font-bold text-green-600 mt-0.5">อนุมัติแล้ว: ${approvedCount}</div>
+                    </td>
+                    <td class="p-4 text-center"><button onclick="deleteActivity('${act.id}')" class="text-red-500 hover:text-red-700 font-bold">ลบ</button></td>
+                </tr>
+                `;
+            }).join('') : '<tr><td colspan="4" class="p-8 text-center text-gray-300">ไม่มีประกาศใหม่</td></tr>';
+
+            const filterLevel = document.getElementById('admin-filter-level') ? document.getElementById('admin-filter-level').value : 'all';
+            let filteredRegs = registrations;
+            if (filterLevel !== 'all') {
+                filteredRegs = registrations.filter(r => r.classroom && r.classroom.startsWith(filterLevel));
+            }
+
+            const regList = document.getElementById('admin-reg-list');
+            regList.innerHTML = filteredRegs.length > 0 ? filteredRegs.map(reg => {
+                const act = activities.find(a => a.id === reg.activityId);
+                const actLimit = act ? parseInt(act.limit) : 0;
+                const approvedCount = registrations.filter(r => r.activityId === reg.activityId && r.status === 'approved').length;
+                const isActFull = approvedCount >= actLimit;
+
+                return `
+                <tr class="hover:bg-gray-50 border-b">
+                    <td class="p-4 font-bold text-gray-800">${reg.parentName}</td>
+                    <td class="p-4 text-gray-500 font-medium">${reg.classroom || '-'}</td>
+                    <td class="p-4 text-gray-500">${reg.activityName}</td>
+                    <td class="p-4"><span class="px-2 py-1 rounded-lg text-[10px] ${reg.status === 'approved' ? 'status-approved' : 'status-pending'}">${reg.status === 'approved' ? 'อนุมัติแล้ว' : 'รอตรวจสอบ'}</span></td>
+                    <td class="p-4 text-center space-x-2 flex justify-center items-center">
+                        ${reg.status === 'pending' ? 
+                            (isActFull ? `<button disabled class="bg-gray-300 text-gray-500 px-3 py-1.5 rounded-xl text-xs font-bold shadow cursor-not-allowed">โควตาเต็ม</button>` : `<button onclick="approveRegistration('${reg.id}')" class="bg-green-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow hover:bg-green-700">อนุมัติ</button>`) 
+                            : '<span class="text-green-600 font-bold">✓</span>'}
+                        <button onclick="deleteRegistration('${reg.id}')" class="text-red-400 font-bold text-xs underline">ลบ</button>
+                    </td>
+                </tr>
+                `;
+            }).join('') : '<tr><td colspan="5" class="p-8 text-center text-gray-300 italic">ไม่มีข้อมูลการสมัคร</td></tr>';
+        };
+
+        window.renderParentView = () => {
+            const cards = document.getElementById('activity-cards');
+            cards.innerHTML = activities.length > 0 ? activities.map(act => {
+                const actLimit = parseInt(act.limit) || 0;
+                const totalRegCount = registrations.filter(r => r.activityId === act.id).length;
+                const remaining = actLimit - totalRegCount;
+                const isFull = remaining <= 0;
+
+                return `
+                <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group">
+                    <div class="h-44 bg-gray-100 relative">
+                        ${act.image ? `<img src="${act.image}" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-gray-300 font-bold italic">Focus School</div>'}
+                    </div>
+                    <div class="p-7">
+                        <h4 class="text-lg font-bold text-gray-800 mb-1 leading-tight">${act.name}</h4>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">🗓 ${act.date}</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold ${isFull ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'} px-3 py-1.5 rounded-lg">
+                                ${isFull ? 'ที่นั่งเต็มแล้ว' : `ว่าง ${remaining} / ${actLimit} ที่นั่ง`}
+                            </span>
+                            <button onclick="register('${act.id}', '${act.name}', ${isFull})" class="${isFull ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'} px-6 py-2.5 rounded-2xl font-bold text-xs shadow-lg transition active:scale-95" ${isFull ? 'disabled' : ''}>
+                                ${isFull ? 'เต็มแล้ว' : 'ลงทะเบียน'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('') : '<p class="col-span-full text-center text-gray-300 py-20 italic font-medium">ยังไม่มีกิจกรรมใหม่ในขณะนี้</p>';
+
+            const currentClassroomInfo = sessionLevel + " (ห้อง " + sessionRoom + ")";
+            const myRegs = registrations.filter(r => r.parentName === sessionParentName && r.classroom === currentClassroomInfo);
+            
+            const regList = document.getElementById('parent-reg-list');
+            if(!sessionParentName) { regList.innerHTML = '<p class="text-gray-300 italic text-center p-6">กรุณาระบุชื่อด้านบนเพื่อดูประวัติ</p>'; return; }
+            
+            regList.innerHTML = myRegs.length > 0 ? myRegs.map(reg => `
+                <div class="flex justify-between items-center p-6 rounded-3xl shadow-sm border-l-8 ${reg.status === 'approved' ? 'border-green-500 bg-green-50' : 'border-yellow-400 bg-yellow-50'}">
+                    <div>
+                        <p class="font-bold text-gray-800">${reg.activityName}</p>
+                        <p class="text-[11px] text-gray-400 font-bold uppercase tracking-tight">${reg.classroom}</p>
+                        <p class="text-xs ${reg.status === 'approved' ? 'text-green-700 font-bold' : 'text-yellow-700 font-medium'} mt-1">
+                            ${reg.status === 'approved' ? '✓ ได้รับอนุญาตเข้าร่วมแล้ว' : '⌛ อยู่ระหว่างรอการอนุมัติ...'}
+                        </p>
+                    </div>
+                    <button onclick="deleteRegistration('${reg.id}')" class="text-red-400 text-[10px] font-bold underline">ยกเลิก</button>
+                </div>
+            `).join('') : `<div class="text-center p-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl"><p class="text-gray-500 font-bold mb-2">ไม่พบประวัติการลงทะเบียน</p><p class="text-xs text-red-400">*ระบบจะแสดงประวัติก็ต่อเมื่อพิมพ์ <b>ชื่อ</b> และเลือก <b>ระดับชั้น/ห้องเรียน</b> ตรงกับตอนที่ลงทะเบียนไว้</p></div>`;
+        };
+
+        // --- Helpers ---
+        document.getElementById('act-image-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    base64Image = ev.target.result;
+                    document.getElementById('image-preview').src = base64Image;
+                    document.getElementById('image-preview').classList.remove('hidden');
+                    document.getElementById('upload-placeholder').classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.remove('hidden');
+            toast.classList.replace(type === 'error' ? 'border-green-500' : 'border-red-500', type === 'error' ? 'border-red-500' : 'border-green-500');
+            setTimeout(() => toast.classList.remove('translate-y-[-150%]'), 10);
+            setTimeout(() => { toast.classList.add('translate-y-[-150%]'); setTimeout(() => toast.classList.add('hidden'), 300); }, 3000);
+        }
+
+        function askConfirm(title, desc, onConfirm) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-desc').textContent = desc;
+            document.getElementById('custom-confirm-modal').style.display = 'flex';
+            pendingDeleteFn = onConfirm;
+        }
+
+        document.getElementById('confirm-ok').onclick = () => { if (pendingDeleteFn) pendingDeleteFn(); document.getElementById('custom-confirm-modal').style.display = 'none'; };
+        document.getElementById('confirm-cancel').onclick = () => { document.getElementById('custom-confirm-modal').style.display = 'none'; };
+
+        // Init App
+        document.addEventListener('DOMContentLoaded', () => {
+            const roomSelect = document.getElementById('parent-room-input');
+            for(let i=1; i<=11; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = "ห้อง " + i;
+                roomSelect.appendChild(opt);
+            }
+            initApp();
+        });
+    </script>
+</body>
+</html>
