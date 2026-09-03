@@ -2,239 +2,1103 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyber Defender: ภารกิจพิทักษ์ข้อมูล</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>เกม AR: อัลกอริทึมในชีวิตประจำวัน</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap');
-        body { font-family: 'Prompt', sans-serif; background-color: #090d16; color: #fff; touch-action: manipulation; }
-        #gameCanvas { background: radial-gradient(circle, #1e1b4b 0%, #0f172a 100%); border: 2px solid #38bdf8; }
+        body { margin: 0; overflow: hidden; background-color: #000; touch-action: none; font-family: 'Sarabun', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        
+        /* Glassmorphism Classes for HTML UI */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen p-4">
+<body>
 
-    <!-- Screen 1: Login -->
-    <div id="loginScreen" class="w-full max-w-md bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl text-center">
-        <div class="text-5xl mb-3">🚀</div>
-        <h1 class="text-3xl font-bold text-cyan-400 mb-2">CYBER DEFENDER</h1>
-        <p class="text-slate-400 text-sm mb-6">เกมแอ็กชันควบคุมยานคัดแยกข้อมูล & กำจัดมัลแวร์</p>
+    <!-- HTML UI Layer (Start Screen) -->
+    <div id="htmlUiContainer" class="absolute inset-0 z-50 flex items-center justify-center pointer-events-auto">
+        <div class="glass-panel p-8 md:p-12 rounded-3xl text-center max-w-lg mx-4">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-md">เรียนรู้อัลกอริทึม</h1>
+            <p class="text-white/90 text-lg mb-8">เรียงลำดับขั้นตอนการแก้ปัญหาในชีวิตประจำวัน</p>
+            
+            <div id="registerForm" class="flex flex-col gap-3 mb-6">
+                <input type="text" id="inpName" placeholder="ชื่อ - นามสกุล" class="px-4 py-3 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <input type="text" id="inpClass" placeholder="ชั้นเรียน (เช่น ป.4/1)" class="px-4 py-3 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <input type="number" id="inpRoll" placeholder="เลขที่" class="px-4 py-3 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <p id="formError" class="text-red-400 text-sm hidden font-bold">กรุณากรอกข้อมูลให้ครบถ้วนก่อนเริ่มเกม</p>
+            </div>
+
+            <div class="bg-black/30 rounded-xl p-4 mb-8 text-left text-white/80 text-sm">
+                <p class="font-bold text-white mb-2 text-base">วิธีเล่น:</p>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>ใช้ <b>กล้อง</b>: ชูมือขึ้นมา เล็งเป้าหมาย แล้ว <b>"จีบนิ้ว" (นิ้วโป้งแตะนิ้วชี้)</b> เพื่อหยิบการ์ด</li>
+                    <li>ใช้ <b>เมาส์/สัมผัส</b>: คลิกและลากการ์ดได้ตามปกติ</li>
+                    <li>นำการ์ดไปวางเรียงในช่องด้านล่างให้ถูกต้องตามลำดับ</li>
+                </ul>
+            </div>
+
+            <div class="flex flex-col gap-4 justify-center">
+                <button id="btnStartInit" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white font-bold py-4 px-10 rounded-full text-xl shadow-lg transform transition hover:scale-105 active:scale-95">
+                    เข้าสู่เกม (Start)
+                </button>
+                <button id="btnShowLeaderboard" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold py-3 px-10 rounded-full text-lg shadow-lg transform transition hover:scale-105 active:scale-95">
+                    🏆 ดูอันดับคะแนน
+                </button>
+            </div>
+            <p class="text-white/50 text-xs mt-4" id="loadingText" style="display: none;">กำลังโหลด AI และกล้อง...</p>
+        </div>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboardModal" class="hidden absolute inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm pointer-events-auto">
+        <div class="glass-panel p-6 rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
+            <h2 class="text-3xl font-bold text-white mb-4 text-center drop-shadow-md">🏆 อันดับคะแนน</h2>
+            <div id="leaderboardList" class="flex-1 overflow-y-auto pr-2 space-y-2">
+                <!-- Scores go here -->
+            </div>
+            <button id="btnCloseLeaderboard" class="mt-6 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95">ปิด</button>
+        </div>
+    </div>
+
+    <!-- Game Clear UI -->
+    <div id="gameClearUiContainer" class="hidden absolute inset-0 z-50 flex items-center justify-center pointer-events-auto">
+        <div class="glass-panel p-8 md:p-12 rounded-3xl text-center max-w-lg mx-4 flex flex-col items-center">
+            <h1 class="text-5xl font-bold text-amber-400 mb-2 drop-shadow-md">All Clear!</h1>
+            <p class="text-white text-xl mb-6" id="finalScoreText"></p>
+            <p class="text-white/70 text-sm mb-8" id="saveStatusText">กำลังบันทึกคะแนน...</p>
+            <div class="flex flex-col sm:flex-row gap-4 w-full justify-center">
+                 <button id="btnRestart" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition hover:scale-105 active:scale-95">🔄 เล่นอีกครั้ง</button>
+                 <button id="btnShowLeaderboardEnd" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition hover:scale-105 active:scale-95">🏆 ดูอันดับคะแนน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Video Element for MediaPipe -->
+    <video id="input_video" class="hidden" autoplay playsinline></video>
+
+    <!-- Main Game Canvas -->
+    <canvas id="output_canvas" class="absolute inset-0 w-full h-full z-10 block"></canvas>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+    
+    let db, auth;
+    if (firebaseConfig) {
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+    }
+
+    // สร้างฟังก์ชัน Global สำหรับบันทึกคะแนน
+    window.saveScoreToFirebase = async function(score, studentInfo) {
+        if (!db || !auth) return { success: false, error: "Firebase not configured" };
         
-        <input type="text" id="playerName" placeholder="พิมพ์ชื่อผู้เล่น..." 
-               class="w-full p-3 rounded-lg bg-slate-800 border border-slate-600 text-cyan-300 font-bold mb-4 focus:outline-none focus:border-cyan-400 text-center text-lg">
+        try {
+            let user = auth.currentUser;
+            if (!user) {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                user = auth.currentUser;
+            }
+            
+            if (!user) return { success: false, error: "Auth failed" };
+
+            // บันทึกข้อมูลไปยัง Path ที่กำหนด
+            const scoresRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+            await addDoc(scoresRef, {
+                userId: user.uid,
+                name: studentInfo.name,
+                className: studentInfo.className,
+                rollNo: studentInfo.rollNo,
+                score: score,
+                timestamp: Date.now()
+            });
+            return { success: true };
+        } catch (e) {
+            console.error("Error saving score:", e);
+            return { success: false, error: e.message };
+        }
+    };
+
+    // ฟังก์ชันสำหรับดึงคะแนนเพื่อนๆ ทั้งหมด
+    window.fetchScoresFromFirebase = async function() {
+        if (!db || !auth) return { success: false, data: [], error: "Firebase not configured" };
         
-        <button onclick="startGame()" class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 rounded-lg text-lg transition shadow-lg shadow-cyan-500/30">
-            เข้าสู่ระบบและเริ่มภารกิจ
-        </button>
-    </div>
+        try {
+            let user = auth.currentUser;
+            if (!user) {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                user = auth.currentUser;
+            }
+            
+            if (!user) return { success: false, data: [], error: "Auth failed" };
 
-    <!-- Screen 2: Game Arcade -->
-    <div id="gameContainer" class="hidden flex flex-col items-center w-full max-w-md">
-        <!-- HUD -->
-        <div class="w-full bg-slate-900 border border-slate-700 p-3 rounded-t-xl flex justify-between items-center text-sm font-bold">
-            <div>👤 <span id="hudName" class="text-cyan-400">Player</span></div>
-            <div>❤️ HP: <span id="hudHP" class="text-red-400">3</span></div>
-            <div>⚡ XP: <span id="hudXP" class="text-yellow-400">0</span></div>
-        </div>
-
-        <!-- Canvas -->
-        <canvas id="gameCanvas" width="360" height="480" class="w-full"></canvas>
-
-        <!-- Controls for Mobile & PC -->
-        <div class="w-full bg-slate-900 border border-slate-700 p-3 rounded-b-xl grid grid-cols-3 gap-2">
-            <button onmousedown="moveLeft()" ontouchstart="moveLeft()" class="bg-slate-800 border border-slate-600 active:bg-cyan-600 p-3 rounded-lg text-xl font-bold">⬅️ ซ้าย</button>
-            <button onclick="shoot()" class="bg-red-600 active:bg-red-500 p-3 rounded-lg font-bold text-white shadow-lg">💥 ยิงยิง!</button>
-            <button onmousedown="moveRight()" ontouchstart="moveRight()" class="bg-slate-800 border border-slate-600 active:bg-cyan-600 p-3 rounded-lg text-xl font-bold">ขวา ➡️</button>
-        </div>
-        <p class="text-xs text-slate-500 mt-2">คำแนะนำ: เก็บ [สีเขียว=ข้อมูล] | ยิงหรือหลบ [สีแดง=ภัยคุกคาม] | เก็บ [สีเหลือง=CC]</p>
-    </div>
-
-    <!-- Screen 3: Game Over / Victory -->
-    <div id="resultScreen" class="hidden w-full max-w-md bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl text-center">
-        <div id="resultIcon" class="text-6xl mb-2">🏆</div>
-        <h2 id="resultTitle" class="text-3xl font-bold mb-2">จบภารกิจ!</h2>
-        <p class="text-slate-400 mb-4">ผู้เล่น: <span id="resName" class="text-cyan-400 font-bold"></span></p>
-
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 mb-6">
-            <div class="text-sm text-slate-400">คะแนน XP ที่ทำได้</div>
-            <div id="resXP" class="text-4xl font-bold text-yellow-400 my-1">0</div>
-            <div id="resBadge" class="text-xs font-bold text-cyan-300 mt-2">ได้รับเหรียญ: -</div>
-        </div>
-
-        <button onclick="location.reload()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg">
-            เล่นใหม่อีกครั้ง
-        </button>
-    </div>
+            const scoresRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+            const snapshot = await getDocs(scoresRef);
+            let scores = [];
+            snapshot.forEach(doc => {
+                scores.push(doc.data());
+            });
+            
+            // เรียงลำดับคะแนนจากมากไปน้อย (ถ้าคะแนนเท่ากัน ให้เรียงตามเวลาที่เล่นล่าสุด)
+            scores.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return b.timestamp - a.timestamp;
+            });
+            
+            return { success: true, data: scores.slice(0, 50) }; // แสดงผล 50 อันดับแรก
+        } catch (e) {
+            console.error("Error fetching scores:", e);
+            return { success: false, data: [], error: e.message };
+        }
+    };
+</script>
 
 <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+// ==========================================
+// 1. DATA & CONSTANTS
+// ==========================================
+const LEVEL_DATA = [
+    {
+        title: "โจทย์: การตื่นนอน",
+        steps: [
+            { id: 1, text: "ลืมตา", emoji: "👀" },
+            { id: 2, text: "ปิดนาฬิกาปลุก", emoji: "⏰" },
+            { id: 3, text: "ลุกจากเตียง", emoji: "🛏️" },
+            { id: 4, text: "เก็บที่นอน", emoji: "🛌" }
+        ]
+    },
+    {
+        title: "โจทย์: แปรงฟัน",
+        steps: [
+            { id: 1, text: "หยิบแปรง", emoji: "🪥" },
+            { id: 2, text: "บีบยาสีฟัน", emoji: "🧴" },
+            { id: 3, text: "แปรงฟัน", emoji: "😬" },
+            { id: 4, text: "บ้วนปาก", emoji: "🚰" }
+        ]
+    },
+    {
+        title: "โจทย์: ทำความสะอาดบ้าน",
+        steps: [
+            { id: 1, text: "เก็บของให้เป็นระเบียบ", emoji: "📦" },
+            { id: 2, text: "กวาดพื้น", emoji: "🧹" },
+            { id: 3, text: "ถูพื้น", emoji: "🪣" },
+            { id: 4, text: "นำขยะไปทิ้ง", emoji: "🗑️" }
+        ]
+    },
+    {
+        title: "โจทย์: อ่านหนังสือ",
+        steps: [
+            { id: 1, text: "เลือกหนังสือ", emoji: "📚" },
+            { id: 2, text: "เปิดหน้าแรก", emoji: "📖" },
+            { id: 3, text: "อ่านทีละหน้า", emoji: "🤓" },
+            { id: 4, text: "ปิดหนังสือเมื่อจบ", emoji: "📕" }
+        ]
+    },
+    {
+        title: "โจทย์: ซักผ้า",
+        steps: [
+            { id: 1, text: "แยกผ้าสี/ผ้าขาว", emoji: "👕" },
+            { id: 2, text: "ใส่ผ้าในเครื่อง", emoji: "🧺" },
+            { id: 3, text: "ใส่ผงซักฟอก", emoji: "🫧" },
+            { id: 4, text: "ตากผ้า", emoji: "☀️" }
+        ]
+    }
+];
 
-    let player = { x: 150, y: 420, width: 60, height: 20, speed: 25 };
-    let bullets = [];
-    let items = [];
-    let score = 0;
-    let hp = 3;
-    let playerName = "";
-    let isGameOver = false;
-    let gameLoopId;
+const STATE = {
+    INIT: 0,
+    INSTRUCTIONS: 1,
+    PLAYING: 2,
+    LEVEL_CLEAR: 3,
+    GAME_CLEAR: 4
+};
 
-    // ข้อมูลจากบทเรียนที่ถูกแปลงเป็น Object ในเกม
-    const itemPool = [
-        // ของดี: ข้อมูล (Data) -> ต้องใช้ยานรับ
-        { text: "ข้อความดิบ", type: "data", color: "#4ade80" },
-        { text: "ตัวเลขดิบ", type: "data", color: "#4ade80" },
-        { text: "ไฟล์ภาพ", type: "data", color: "#4ade80" },
-        { text: "ไฟล์เสียง", type: "data", color: "#4ade80" },
+const PINCH_THRESHOLD = 40; // Pixel distance for pinch
+
+// ==========================================
+// 2. GAME VARIABLES
+// ==========================================
+let canvas = document.getElementById('output_canvas');
+let ctx = canvas.getContext('2d');
+let videoElement = document.getElementById('input_video');
+let htmlUiContainer = document.getElementById('htmlUiContainer');
+let btnStartInit = document.getElementById('btnStartInit');
+
+// Leaderboard UI elements
+let btnShowLeaderboard = document.getElementById('btnShowLeaderboard');
+let leaderboardModal = document.getElementById('leaderboardModal');
+let btnCloseLeaderboard = document.getElementById('btnCloseLeaderboard');
+let leaderboardList = document.getElementById('leaderboardList');
+let gameClearUiContainer = document.getElementById('gameClearUiContainer');
+let btnRestart = document.getElementById('btnRestart');
+let btnShowLeaderboardEnd = document.getElementById('btnShowLeaderboardEnd');
+
+let currentState = STATE.INIT;
+let currentLevelIndex = 0;
+let score = 0;
+
+// Input tracking (unifies Mouse, Touch, and AR Hand)
+let pointer = { x: 0, y: 0, isDown: false, isHovering: false, activeType: 'mouse', isHandVisible: false };
+// AR Specific
+let lastPinchState = false;
+
+// Game Objects
+let cards = [];
+let slots = [];
+let arStartButton = null;
+
+let studentInfo = { name: "", className: "", rollNo: "" };
+let saveStatus = "idle"; // idle, saving, success, error
+
+let draggedCard = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+let messageTimer = 0;
+let messageText = "";
+
+// สร้างตัวแปรเก็บข้อมูลวงกลมพื้นหลังเพื่อให้เคลื่อนที่ช้าๆ
+let bgParticles = [];
+
+// ==========================================
+// 3. INITIALIZATION & RESIZE
+// ==========================================
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    if (currentState === STATE.INSTRUCTIONS) setupInstructionUI();
+    if (currentState === STATE.PLAYING) repositionGameObjects();
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ==========================================
+// Leaderboard & UI Interaction
+// ==========================================
+async function openLeaderboard() {
+    leaderboardModal.classList.remove('hidden');
+    leaderboardList.innerHTML = '<p class="text-white text-center py-4">กำลังโหลดข้อมูล...</p>';
+    
+    if (window.fetchScoresFromFirebase) {
+        const result = await window.fetchScoresFromFirebase();
+        if (result.success) {
+            if (result.data.length === 0) {
+                leaderboardList.innerHTML = '<p class="text-white/70 text-center py-4">ยังไม่มีข้อมูลคะแนน</p>';
+            } else {
+                leaderboardList.innerHTML = '';
+                result.data.forEach((entry, index) => {
+                    let rankClass = index === 0 ? "text-yellow-400 text-xl font-bold" : (index === 1 ? "text-gray-300 text-lg font-bold" : (index === 2 ? "text-amber-600 text-lg font-bold" : "text-white font-bold"));
+                    const item = document.createElement('div');
+                    item.className = 'bg-white/10 p-3 rounded-xl flex justify-between items-center border border-white/20 mb-2';
+                    item.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <span class="w-8 text-center ${rankClass}">#${index + 1}</span>
+                            <div>
+                                <div class="text-white font-bold text-lg">${entry.name || 'ไม่ระบุชื่อ'}</div>
+                                <div class="text-white/60 text-xs">${entry.className || '-'} | เลขที่ ${entry.rollNo || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="text-blue-300 font-bold text-2xl drop-shadow">${entry.score}</div>
+                    `;
+                    leaderboardList.appendChild(item);
+                });
+            }
+        } else {
+            leaderboardList.innerHTML = '<p class="text-red-400 text-center py-4">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
+        }
+    } else {
+         leaderboardList.innerHTML = '<p class="text-red-400 text-center py-4">ไม่สามารถเชื่อมต่อฐานข้อมูลได้</p>';
+    }
+}
+
+btnShowLeaderboard.addEventListener('click', openLeaderboard);
+btnShowLeaderboardEnd.addEventListener('click', openLeaderboard);
+btnCloseLeaderboard.addEventListener('click', () => { leaderboardModal.classList.add('hidden'); });
+
+btnRestart.addEventListener('click', () => {
+    gameClearUiContainer.classList.add('hidden');
+    score = 0;
+    currentLevelIndex = 0;
+    currentState = STATE.INSTRUCTIONS;
+    setupInstructionUI();
+});
+
+btnStartInit.addEventListener('click', async () => {
+    // Validate inputs
+    const inpName = document.getElementById('inpName').value.trim();
+    const inpClass = document.getElementById('inpClass').value.trim();
+    const inpRoll = document.getElementById('inpRoll').value.trim();
+    const formError = document.getElementById('formError');
+
+    if (!inpName || !inpClass || !inpRoll) {
+        formError.classList.remove('hidden');
+        return;
+    }
+    formError.classList.add('hidden');
+
+    // เก็บข้อมูลผู้เล่น
+    studentInfo.name = inpName;
+    studentInfo.className = inpClass;
+    studentInfo.rollNo = inpRoll;
+
+    document.getElementById('loadingText').style.display = 'block';
+    btnStartInit.disabled = true;
+    
+    // Start Camera & MediaPipe
+    await initMediaPipe();
+    
+    // Transition to AR Instruction Screen
+    htmlUiContainer.style.display = 'none';
+    currentState = STATE.INSTRUCTIONS;
+    setupInstructionUI();
+    
+    // Start Game Loop
+    requestAnimationFrame(gameLoop);
+});
+
+// ==========================================
+// 4. MEDIAPIPE HANDS SETUP
+// ==========================================
+let hands, camera;
+let cameraStarted = false;
+
+async function initMediaPipe() {
+    // เก็บสถานะของ console.error เดิมไว้
+    let originalConsoleError = console.error;
+    
+    try {
+        // 1. ตรวจสอบว่าระบบเบราว์เซอร์นี้รองรับการเรียกใช้กล้องหรือไม่
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error("Camera API is not supported in this environment.");
+        }
+
+        // 2. ตรวจสอบล่วงหน้าว่ามีอุปกรณ์กล้อง (Video Input) อยู่บนเครื่องจริงๆ หรือไม่
+        if (navigator.mediaDevices.enumerateDevices) {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const hasVideoInput = devices.some(device => device.kind === 'videoinput');
+            if (!hasVideoInput) {
+                throw new Error("No webcam found on this device.");
+            }
+        }
+
+        hands = new Hands({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        }});
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
+        });
+        hands.onResults(onResults);
+
+        camera = new Camera(videoElement, {
+            onFrame: async () => { await hands.send({image: videoElement}); },
+            width: 1280, height: 720
+        });
         
-        // ของอันตราย: ภัยคุกคาม (Malware) -> ต้องยิงทำลาย หรือหลบ
-        { text: "Ransomware", type: "threat", color: "#f87171" },
-        { text: "Trojan", type: "threat", color: "#f87171" },
-        { text: "Spyware", type: "threat", color: "#f87171" },
-        { text: "Worm ไวรัส", type: "threat", color: "#f87171" },
+        // 3. ดักจับ Error ภายในไลบรารีของ MediaPipe ไม่ให้แสดงสีแดงในหน้าต่าง Console
+        console.error = function(...args) {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('Failed to acquire camera feed')) return;
+            originalConsoleError.apply(console, args);
+        };
 
-        // โบนัส: สิทธิและลิขสิทธิ์ (CC) -> เก็บได้ XP สูง
-        { text: "CC-BY", type: "bonus", color: "#facc15" },
-        { text: "CC-NC", type: "bonus", color: "#facc15" }
-    ];
-
-    function startGame() {
-        const nameInput = document.getElementById("playerName").value.trim();
-        if(!nameInput) return alert("กรุณาใส่ชื่อก่อนเริ่มเล่น!");
+        await camera.start();
         
-        playerName = nameInput;
-        document.getElementById("hudName").innerText = playerName;
-        document.getElementById("loginScreen").classList.add("hidden");
-        document.getElementById("gameContainer").classList.remove("hidden");
-
-        // Controls Keyboard
-        window.addEventListener("keydown", (e) => {
-            if(e.key === "ArrowLeft") moveLeft();
-            if(e.key === "ArrowRight") moveRight();
-            if(e.key === " ") shoot();
-        });
-
-        setInterval(spawnItem, 1200);
-        gameLoop();
+        // คืนค่า console.error กลับสู่ปกติเมื่อกล้องโหลดสำเร็จ
+        console.error = originalConsoleError;
+        cameraStarted = true;
+    } catch (error) {
+        // แจ้งเตือนเงียบๆ เป็น Warning แทน
+        console.warn("สลับไปใช้โหมดเมาส์/สัมผัส เนื่องจากไม่สามารถเข้าถึงกล้องได้:", error.message);
+        cameraStarted = false;
+        
+        // คืนค่า console.error ให้ระบบ
+        console.error = originalConsoleError; 
     }
+}
 
-    function moveLeft() { if(player.x > 0) player.x -= player.speed; }
-    function moveRight() { if(player.x < canvas.width - player.width) player.x += player.speed; }
+function onResults(results) {
+    pointer.isHandVisible = false;
 
-    function shoot() {
-        if(isGameOver) return;
-        bullets.push({ x: player.x + player.width / 2 - 3, y: player.y, width: 6, height: 12 });
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        pointer.isHandVisible = true;
+        pointer.activeType = 'hand';
+
+        const landmarks = results.multiHandLandmarks[0];
+        
+        // Map normalized coordinates (0-1) to Canvas coordinates
+        // Assuming video covers canvas (calculated in draw loop), we simplify mapping here
+        // For perfect mapping, we should use the same aspect ratio math, but simple mapping is often enough
+        // Let's use exact mapping based on video cover logic.
+        const hRatio = canvas.width / videoElement.videoWidth;
+        const vRatio = canvas.height / videoElement.videoHeight;
+        const ratio = Math.max(hRatio, vRatio);
+        const centerShift_x = (canvas.width - videoElement.videoWidth * ratio) / 2;
+        const centerShift_y = (canvas.height - videoElement.videoHeight * ratio) / 2;
+
+        const mapToCanvas = (lm) => {
+            // MediaPipe mirrors x by default on some setups, but usually camera_utils handles it.
+            // If pointer moves opposite, use: (1 - lm.x)
+            let vx = (1 - lm.x) * videoElement.videoWidth; 
+            let vy = lm.y * videoElement.videoHeight;
+            return {
+                x: vx * ratio + centerShift_x,
+                y: vy * ratio + centerShift_y
+            };
+        };
+
+        const indexTip = mapToCanvas(landmarks[8]);
+        const thumbTip = mapToCanvas(landmarks[4]);
+
+        // Update pointer position to index tip
+        pointer.x = indexTip.x;
+        pointer.y = indexTip.y;
+
+        // Calculate distance for pinch
+        const dx = indexTip.x - thumbTip.x;
+        const dy = indexTip.y - thumbTip.y;
+        const distance = Math.sqrt(dx * dx + dy * dy); // พีทาโกรัส
+
+        const currentPinchState = distance < PINCH_THRESHOLD;
+
+        // Simulate MouseDown/Up based on Pinch
+        if (currentPinchState && !lastPinchState) {
+            handlePointerDown();
+        } else if (!currentPinchState && lastPinchState) {
+            handlePointerUp();
+        }
+        
+        pointer.isDown = currentPinchState;
+        lastPinchState = currentPinchState;
     }
+}
 
-    function spawnItem() {
-        if(isGameOver) return;
-        const template = itemPool[Math.floor(Math.random() * itemPool.length)];
-        items.push({
-            x: Math.random() * (canvas.width - 80),
-            y: -30,
-            width: 80,
-            height: 26,
-            speed: 2 + Math.random() * 1.5,
-            ...template
-        });
+// ==========================================
+// 5. INPUT HANDLING (Mouse/Touch Fallback)
+// ==========================================
+function setPointerPos(e) {
+    if (pointer.activeType === 'hand') return; // Ignore mouse if hand is active
+    
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+        pointer.activeType = 'touch';
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+        pointer.activeType = 'mouse';
     }
+    
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = clientX - rect.left;
+    pointer.y = clientY - rect.top;
+}
 
-    function gameLoop() {
-        if(isGameOver) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+canvas.addEventListener('mousedown', (e) => { setPointerPos(e); pointer.isDown = true; handlePointerDown(); });
+canvas.addEventListener('mousemove', (e) => { if(pointer.isDown || pointer.activeType === 'mouse') setPointerPos(e); });
+canvas.addEventListener('mouseup', () => { pointer.isDown = false; handlePointerUp(); });
+canvas.addEventListener('touchstart', (e) => { e.preventDefault(); setPointerPos(e); pointer.isDown = true; handlePointerDown(); }, {passive: false});
+canvas.addEventListener('touchmove', (e) => { e.preventDefault(); setPointerPos(e); }, {passive: false});
+canvas.addEventListener('touchend', (e) => { e.preventDefault(); pointer.isDown = false; handlePointerUp(); });
 
-        // Draw Player Ship
-        ctx.fillStyle = "#38bdf8";
-        ctx.beginPath();
-        ctx.roundRect(player.x, player.y, player.width, player.height, 8);
-        ctx.fill();
-
-        // Draw Bullets
-        ctx.fillStyle = "#ef4444";
-        bullets.forEach((b, index) => {
-            b.y -= 7;
-            ctx.fillRect(b.x, b.y, b.width, b.height);
-            if(b.y < 0) bullets.splice(index, 1);
-        });
-
-        // Draw Falling Items
-        items.forEach((item, iIndex) => {
-            item.y += item.speed;
-
-            // Box style
-            ctx.fillStyle = item.color;
-            ctx.beginPath();
-            ctx.roundRect(item.x, item.y, item.width, item.height, 5);
-            ctx.fill();
-
-            // Text style inside Box
-            ctx.fillStyle = "#000";
-            ctx.font = "bold 11px Prompt";
-            ctx.textAlign = "center";
-            ctx.fillText(item.text, item.x + item.width/2, item.y + 17);
-
-            // Bullet vs Item Collision (ยิงทำลาย)
-            bullets.forEach((b, bIndex) => {
-                if(b.x < item.x + item.width && b.x + b.width > item.x &&
-                   b.y < item.y + item.height && b.y + b.height > item.y) {
-                    
-                    if(item.type === "threat") {
-                        score += 100; // ยิงไวรัสได้คะแนน
-                    } else {
-                        score = Math.max(0, score - 50); // ยิงข้อมูลตัวเองโดนหักคะแนน
-                    }
-                    items.splice(iIndex, 1);
-                    bullets.splice(bIndex, 1);
-                    updateHUD();
+function handlePointerDown() {
+    if (currentState === STATE.INSTRUCTIONS) {
+        if (arStartButton && isPointInRect(pointer, arStartButton)) {
+            startGame();
+        }
+    } else if (currentState === STATE.PLAYING) {
+        // Find topmost card
+        for (let i = cards.length - 1; i >= 0; i--) {
+            let card = cards[i];
+            if (isPointInRect(pointer, card)) {
+                draggedCard = card;
+                dragOffsetX = pointer.x - card.x;
+                dragOffsetY = pointer.y - card.y;
+                
+                // Remove from current slot if it was in one
+                if (card.currentSlot) {
+                    card.currentSlot.occupiedBy = null;
+                    card.currentSlot = null;
                 }
+                
+                // Bring to front
+                cards.splice(i, 1);
+                cards.push(draggedCard);
+                break;
+            }
+        }
+    } else if (currentState === STATE.LEVEL_CLEAR) {
+         nextLevel();
+    }
+}
+
+function handlePointerUp() {
+    if (draggedCard) {
+        // Check drop on slots
+        let droppedInSlot = false;
+        for (let slot of slots) {
+            // Simple center-to-center distance check for snapping
+            let cardCenterX = draggedCard.x + draggedCard.width / 2;
+            let cardCenterY = draggedCard.y + draggedCard.height / 2;
+            let slotCenterX = slot.x + slot.width / 2;
+            let slotCenterY = slot.y + slot.height / 2;
+            
+            let dist = Math.sqrt(Math.pow(cardCenterX - slotCenterX, 2) + Math.pow(cardCenterY - slotCenterY, 2));
+            
+            if (dist < slot.width / 1.5) {
+                if (!slot.occupiedBy) {
+                    // Snap to slot
+                    draggedCard.x = slot.x + (slot.width - draggedCard.width) / 2;
+                    draggedCard.y = slot.y + (slot.height - draggedCard.height) / 2;
+                    draggedCard.currentSlot = slot;
+                    slot.occupiedBy = draggedCard;
+                    droppedInSlot = true;
+                }
+                break;
+            }
+        }
+        
+        // Return to original pos if not dropped in a valid slot
+        if (!droppedInSlot) {
+            draggedCard.x = draggedCard.originX;
+            draggedCard.y = draggedCard.originY;
+        }
+        
+        draggedCard = null;
+        checkWinCondition();
+    }
+}
+
+function isPointInRect(pt, rect) {
+    return pt.x >= rect.x && pt.x <= rect.x + rect.width &&
+           pt.y >= rect.y && pt.y <= rect.y + rect.height;
+}
+
+// ==========================================
+// 6. GAME LOGIC & SETUP
+// ==========================================
+function setupInstructionUI() {
+    arStartButton = {
+        x: canvas.width / 2 - 150,
+        y: canvas.height / 2 - 50,
+        width: 300,
+        height: 100,
+        text: "เริ่มเกม!",
+        color: "rgba(34, 197, 94, 0.8)", // Green
+        hoverColor: "rgba(34, 197, 94, 1)"
+    };
+}
+
+function startGame() {
+    score = 0;
+    currentLevelIndex = 0;
+    loadLevel(currentLevelIndex);
+    currentState = STATE.PLAYING;
+}
+
+function loadLevel(index) {
+    const levelData = LEVEL_DATA[index];
+    let stepCount = levelData.steps.length;
+    
+    // Prepare Cards
+    cards = [];
+    let shuffledSteps = [...levelData.steps].sort(() => Math.random() - 0.5);
+    
+    const cardWidth = Math.min(180, canvas.width / stepCount - 20);
+    const cardHeight = cardWidth * 1.2;
+    const startY = canvas.height * 0.2;
+    
+    const totalCardsWidth = (cardWidth * stepCount) + (20 * (stepCount - 1));
+    let startX = (canvas.width - totalCardsWidth) / 2;
+
+    shuffledSteps.forEach((step, i) => {
+        cards.push({
+            id: step.id,
+            text: step.text,
+            emoji: step.emoji,
+            width: cardWidth,
+            height: cardHeight,
+            x: startX + i * (cardWidth + 20),
+            y: startY,
+            originX: startX + i * (cardWidth + 20),
+            originY: startY,
+            currentSlot: null
+        });
+    });
+
+    // Prepare Slots
+    slots = [];
+    const slotY = canvas.height * 0.7;
+    startX = (canvas.width - totalCardsWidth) / 2;
+    
+    for (let i = 0; i < stepCount; i++) {
+        slots.push({
+            expectedId: levelData.steps[i].id,
+            x: startX + i * (cardWidth + 20),
+            y: slotY,
+            width: cardWidth,
+            height: cardHeight,
+            occupiedBy: null
+        });
+    }
+}
+
+function repositionGameObjects() {
+    // Basic repositioning on resize if needed (reloading level is easier for this scale)
+    if (currentState === STATE.PLAYING) {
+        // Store current occupations
+        let occupations = slots.map(s => s.occupiedBy);
+        loadLevel(currentLevelIndex);
+        // Restore occupations (simplified, might snap back to origins if resize is drastic)
+        occupations.forEach((card, i) => {
+             if(card) {
+                 let newCard = cards.find(c => c.id === card.id);
+                 if(newCard) {
+                     newCard.x = slots[i].x + (slots[i].width - newCard.width) / 2;
+                     newCard.y = slots[i].y + (slots[i].height - newCard.height) / 2;
+                     newCard.currentSlot = slots[i];
+                     slots[i].occupiedBy = newCard;
+                 }
+             }
+        });
+    }
+}
+
+function checkWinCondition() {
+    let allFilled = true;
+    let allCorrect = true;
+    
+    for (let slot of slots) {
+        if (!slot.occupiedBy) {
+            allFilled = false;
+            break;
+        }
+        if (slot.occupiedBy.id !== slot.expectedId) {
+            allCorrect = false;
+        }
+    }
+
+    if (allFilled) {
+        if (allCorrect) {
+            score += 100;
+            showMessage("ถูกต้อง! ยอดเยี่ยมมาก", "rgba(34, 197, 94, 0.9)");
+            setTimeout(() => {
+                currentState = STATE.LEVEL_CLEAR;
+            }, 1500);
+        } else {
+            showMessage("ยังไม่ถูก ลองเรียงใหม่นะ", "rgba(239, 68, 68, 0.9)");
+            // Return wrong cards
+            slots.forEach(slot => {
+                 if(slot.occupiedBy && slot.occupiedBy.id !== slot.expectedId) {
+                     slot.occupiedBy.x = slot.occupiedBy.originX;
+                     slot.occupiedBy.y = slot.occupiedBy.originY;
+                     slot.occupiedBy.currentSlot = null;
+                     slot.occupiedBy = null;
+                 }
             });
+        }
+    }
+}
 
-            // Player Catch Item Collision (ยานชนขอบไอเทม)
-            if(player.x < item.x + item.width && player.x + player.width > item.x &&
-               player.y < item.y + item.height && player.y + player.height > item.y) {
-                
-                if(item.type === "data") {
-                    score += 150; // รับข้อมูลสำเร็จ (ประมวลผล)
-                } else if(item.type === "bonus") {
-                    score += 200; // เก็บ CC ได้โบนัส
-                } else if(item.type === "threat") {
-                    hp--; // ชนไวรัส เลือดลด
+function nextLevel() {
+    currentLevelIndex++;
+    if (currentLevelIndex < LEVEL_DATA.length) {
+        loadLevel(currentLevelIndex);
+        currentState = STATE.PLAYING;
+    } else {
+        currentState = STATE.GAME_CLEAR;
+        saveGameScore();
+        showGameClearUI();
+    }
+}
+
+function showGameClearUI() {
+    gameClearUiContainer.classList.remove('hidden');
+    document.getElementById('finalScoreText').innerText = `ผู้เล่น: ${studentInfo.name} | คะแนนรวม: ${score}`;
+    updateSaveStatusUI();
+}
+
+function updateSaveStatusUI() {
+    const el = document.getElementById('saveStatusText');
+    if (saveStatus === "saving") {
+        el.innerText = "กำลังบันทึกคะแนนลงฐานข้อมูล...";
+        el.className = "text-blue-300 text-sm mb-8 animate-pulse";
+    } else if (saveStatus === "success") {
+        el.innerText = "บันทึกคะแนนสำเร็จ!";
+        el.className = "text-green-400 text-sm mb-8 font-bold";
+    } else if (saveStatus === "error") {
+        el.innerText = "ไม่สามารถบันทึกคะแนนได้ (อาจไม่มีการเชื่อมต่อฐานข้อมูล)";
+        el.className = "text-red-400 text-sm mb-8";
+    }
+}
+
+async function saveGameScore() {
+    saveStatus = "saving";
+    updateSaveStatusUI();
+    if (window.saveScoreToFirebase) {
+        const result = await window.saveScoreToFirebase(score, studentInfo);
+        saveStatus = result.success ? "success" : "error";
+    } else {
+        saveStatus = "error";
+    }
+    updateSaveStatusUI();
+}
+
+function showMessage(text, color) {
+    messageText = text;
+    messageTimer = 180; // approx 3 seconds at 60fps
+}
+
+// ==========================================
+// 7. MAIN UPDATE & DRAW LOOP
+// ==========================================
+function update() {
+    pointer.isHovering = false;
+
+    if (currentState === STATE.INSTRUCTIONS) {
+        if (arStartButton && isPointInRect(pointer, arStartButton)) {
+            pointer.isHovering = true;
+        }
+    } else if (currentState === STATE.PLAYING) {
+        if (draggedCard) {
+            draggedCard.x = pointer.x - dragOffsetX;
+            draggedCard.y = pointer.y - dragOffsetY;
+        } else {
+            // Check hover for cursor state
+            for (let card of cards) {
+                if (isPointInRect(pointer, card)) {
+                    pointer.isHovering = true;
+                    break;
                 }
-                
-                items.splice(iIndex, 1);
-                updateHUD();
-
-                if(hp <= 0) endGame();
             }
-
-            // Fall Off Screen
-            if(item.y > canvas.height) {
-                items.splice(iIndex, 1);
-            }
-        });
-
-        gameLoopId = requestAnimationFrame(gameLoop);
+        }
+    } else if (currentState === STATE.LEVEL_CLEAR || currentState === STATE.GAME_CLEAR) {
+        pointer.isHovering = true; // Make clicking anywhere proceed
     }
 
-    function updateHUD() {
-        document.getElementById("hudXP").innerText = score;
-        document.getElementById("hudHP").innerText = hp;
-    }
+    if (messageTimer > 0) messageTimer--;
+}
 
-    function endGame() {
-        isGameOver = true;
-        cancelAnimationFrame(gameLoopId);
-        document.getElementById("gameContainer").classList.add("hidden");
-        document.getElementById("resultScreen").classList.remove("hidden");
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        document.getElementById("resName").innerText = playerName;
-        document.getElementById("resXP").innerText = score;
+    // 1. Draw Video Background (Cover mode)
+    if (cameraStarted && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+        const hRatio = canvas.width / videoElement.videoWidth;
+        const vRatio = canvas.height / videoElement.videoHeight;
+        const ratio = Math.max(hRatio, vRatio);
+        const centerShift_x = (canvas.width - videoElement.videoWidth * ratio) / 2;
+        const centerShift_y = (canvas.height - videoElement.videoHeight * ratio) / 2;
 
-        let badge = "🛡️ ผู้พิทักษ์ฝึกหัด";
-        if(score >= 1000) badge = "👑 Cyber Master (ระดับเชี่ยวชาญ)";
-        else if(score >= 500) badge = "🥇 Cyber Knight (ระดับนักพิทักษ์)";
+        ctx.save();
+        // Flip video horizontally for mirror effect (intuitive for AR)
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
         
-        document.getElementById("resBadge").innerText = "ฉายาที่ได้รับ: " + badge;
+        ctx.drawImage(videoElement, 0, 0, videoElement.videoWidth, videoElement.videoHeight,
+                      centerShift_x, centerShift_y, videoElement.videoWidth * ratio, videoElement.videoHeight * ratio);
+        
+        // Darken video slightly for UI contrast
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+    } else if (!cameraStarted) {
+        // Fallback background if camera is not available
+        ctx.fillStyle = '#1e1b4b'; // Dark indigo background
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // สร้างวงกลมครั้งแรกหากยังไม่มี
+        if (bgParticles.length === 0 && canvas.width > 0) {
+            for (let i = 0; i < 12; i++) {
+                bgParticles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 150 + 50,
+                    vx: (Math.random() - 0.5) * 0.4, // ความเร็วแนวนอนช้าๆ
+                    vy: (Math.random() - 0.5) * 0.4  // ความเร็วแนวตั้งช้าๆ
+                });
+            }
+        }
+
+        // วาดและอัปเดตตำแหน่งวงกลมให้ลอยช้าๆ
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+        bgParticles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+
+            // ให้วงกลมวนกลับมาเมื่อลอยออกนอกจอ
+            if (p.x - p.radius > canvas.width) p.x = -p.radius;
+            if (p.x + p.radius < 0) p.x = canvas.width + p.radius;
+            if (p.y - p.radius > canvas.height) p.y = -p.radius;
+            if (p.y + p.radius < 0) p.y = canvas.height + p.radius;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
+
+    // 2. Draw Game State Elements
+    if (currentState === STATE.INSTRUCTIONS) {
+        drawInstructionScreen();
+    } else if (currentState === STATE.PLAYING || currentState === STATE.LEVEL_CLEAR) {
+        drawGameplayScreen();
+    } else if (currentState === STATE.GAME_CLEAR) {
+        drawGameClearScreen();
+    }
+
+    // 3. Draw Messages
+    if (messageTimer > 0) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, canvas.height / 2 - 50, canvas.width, 100);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 36px Sarabun';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(messageText, canvas.width / 2, canvas.height / 2);
+    }
+
+    // 4. Draw AR/Mouse Cursor Feedback
+    drawCursor();
+}
+
+// --- Specific Drawing Functions ---
+
+function drawGlassRect(x, y, w, h, radius, bgStr, borderStr) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, radius);
+    
+    // Shadow for 2.5D
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetY = 10;
+    
+    ctx.fillStyle = bgStr;
+    ctx.fill();
+    
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = borderStr;
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawInstructionScreen() {
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 40px Sarabun';
+    ctx.textAlign = 'center';
+    ctx.fillText("ทดสอบการควบคุม", canvas.width / 2, canvas.height * 0.3);
+    
+    ctx.font = '24px Sarabun';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText("ใช้มือ 'จีบนิ้ว' หรือใช้เมาส์ 'คลิก' ที่ปุ่มสีเขียวเพื่อเริ่ม", canvas.width / 2, canvas.height * 0.3 + 40);
+
+    if (arStartButton) {
+        let btnColor = pointer.isHovering ? arStartButton.hoverColor : arStartButton.color;
+        drawGlassRect(arStartButton.x, arStartButton.y, arStartButton.width, arStartButton.height, 20, btnColor, 'rgba(255,255,255,0.5)');
+        
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 32px Sarabun';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(arStartButton.text, arStartButton.x + arStartButton.width / 2, arStartButton.y + arStartButton.height / 2);
+    }
+}
+
+function drawGameplayScreen() {
+    const levelData = LEVEL_DATA[currentLevelIndex];
+
+    // UI Header
+    drawGlassRect(20, 20, 400, 80, 15, 'rgba(255, 255, 255, 0.1)', 'rgba(255,255,255,0.2)');
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 24px Sarabun';
+    ctx.fillText(levelData.title, 40, 60);
+    
+    drawGlassRect(canvas.width - 220, 20, 200, 80, 15, 'rgba(255, 255, 255, 0.1)', 'rgba(255,255,255,0.2)');
+    ctx.textAlign = 'center';
+    ctx.fillText(`คะแนน: ${score}`, canvas.width - 120, 60);
+
+    // Draw Slots
+    slots.forEach((slot, index) => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([10, 10]);
+        ctx.roundRect(slot.x, slot.y, slot.width, slot.height, 15);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.stroke();
+        
+        // Number indicator
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.font = 'bold 40px Sarabun';
+        ctx.fillText(index + 1, slot.x + slot.width/2, slot.y + slot.height/2);
+        ctx.restore();
+    });
+
+    // Draw Cards (draw dragged card last so it's on top)
+    cards.forEach(card => {
+        if (card !== draggedCard) drawCard(card);
+    });
+    if (draggedCard) drawCard(draggedCard, true);
+
+    if (currentState === STATE.LEVEL_CLEAR) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(0,0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 48px Sarabun';
+        ctx.textAlign = 'center';
+        ctx.fillText("ผ่านด่าน!", canvas.width/2, canvas.height/2 - 40);
+        ctx.font = '24px Sarabun';
+        ctx.fillText("จีบนิ้ว หรือ คลิก เพื่อไปด่านต่อไป", canvas.width/2, canvas.height/2 + 20);
+    }
+}
+
+function drawCard(card, isDragging = false) {
+    let scale = isDragging ? 1.05 : 1;
+    let w = card.width * scale;
+    let h = card.height * scale;
+    let x = card.x - (w - card.width) / 2;
+    let y = card.y - (h - card.height) / 2;
+
+    let bgColor = isDragging ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.8)';
+    let borderColor = isDragging ? '#3b82f6' : 'rgba(255,255,255,0.8)';
+
+    drawGlassRect(x, y, w, h, 15, bgColor, borderColor);
+
+    // Emoji
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `${w * 0.4}px Arial`;
+    ctx.fillText(card.emoji, x + w / 2, y + h * 0.4);
+
+    // Text
+    ctx.fillStyle = '#1f2937';
+    ctx.font = `bold ${w * 0.12}px Sarabun`;
+    
+    // Simple text wrap handling for single line
+    let txt = card.text;
+    ctx.fillText(txt, x + w / 2, y + h * 0.8);
+}
+
+function drawGameClearScreen() {
+    // ปล่อยให้ HTML UI (gameClearUiContainer) รับหน้าที่แสดงผลทั้งหมด
+    // ตรงนี้เราแค่วาดพื้นหลังสีดำโปร่งแสงพรางตา
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(0,0, canvas.width, canvas.height);
+}
+
+function drawCursor() {
+    if (currentState === STATE.INIT) return;
+
+    // AI Warning
+    if (cameraStarted && !pointer.isHandVisible && pointer.activeType === 'hand') {
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+        ctx.roundRect(canvas.width/2 - 150, 20, 300, 40, 20);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Sarabun';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText("กำลังหามือของคุณ... (ใช้เมาส์แทนได้)", canvas.width/2, 40);
+    } else if (!cameraStarted) {
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.8)'; // Amber
+        ctx.roundRect(canvas.width/2 - 150, 20, 300, 40, 20);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Sarabun';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText("ไม่พบกล้อง กำลังใช้โหมดเมาส์/สัมผัส", canvas.width/2, 40);
+    }
+
+    // Determine Cursor State
+    let cursorColor, cursorStyle;
+    
+    if (pointer.isDown && draggedCard) {
+        cursorColor = '#22c55e'; // Green (Grabbed)
+        cursorStyle = 'solid';
+    } else if (pointer.isDown && !pointer.isHovering) {
+        cursorColor = '#ef4444'; // Red (Missed Pinch)
+        cursorStyle = 'solid';
+    } else if (pointer.isHovering) {
+        cursorColor = '#eab308'; // Yellow (Hover)
+        cursorStyle = 'dashed';
+    } else {
+        cursorColor = '#3b82f6'; // Blue (Normal)
+        cursorStyle = 'solid';
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(pointer.x, pointer.y, 15, 0, 2 * Math.PI);
+    
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = cursorColor;
+    
+    if (cursorStyle === 'dashed') {
+        ctx.setLineDash([5, 5]);
+    }
+    
+    // Add glow
+    ctx.shadowColor = cursorColor;
+    ctx.shadowBlur = 10;
+    
+    ctx.stroke();
+
+    // Draw internal icon if grabbed
+    if (pointer.isDown && draggedCard) {
+        ctx.fillStyle = cursorColor;
+        ctx.beginPath();
+        ctx.arc(pointer.x, pointer.y, 6, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+    
+    ctx.restore();
+}
+
+// ==========================================
+// 8. GAME LOOP
+// ==========================================
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
 </script>
 </body>
 </html>
