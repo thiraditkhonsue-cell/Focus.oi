@@ -1,158 +1,7 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tomb of the Code</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #000;
-            font-family: 'Press Start 2P', cursive;
-            color: #fff;
-            touch-action: none;
-        }
-        .prompt-font {
-            font-family: 'Prompt', sans-serif;
-        }
-        #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        canvas {
-            display: block;
-            background-color: #111;
-            image-rendering: pixelated;
-        }
-        
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-        }
-        .hidden { display: none !important; }
-        .btn {
-            background-color: #ffcc00;
-            color: #000;
-            padding: 15px 30px;
-            font-size: 16px;
-            border: 4px solid #fff;
-            cursor: pointer;
-            margin: 10px;
-            text-transform: uppercase;
-            font-family: 'Press Start 2P', cursive;
-            transition: transform 0.1s;
-        }
-        .btn:active { transform: scale(0.95); }
-        
-        #hud {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            display: flex;
-            justify-content: space-between;
-            z-index: 5;
-            pointer-events: none;
-            font-size: 14px;
-            text-shadow: 2px 2px 0 #000;
-        }
-        #score-display { color: #ffcc00; }
-        #level-display { color: #00ffff; margin-right: 15px; }
-        #multiplier-display {
-            color: #00ff00;
-            animation: pulse 1s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        .question-box {
-            background-color: #222;
-            border: 4px solid #ff0055;
-            padding: 20px;
-            max-width: 90%;
-            width: 400px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        
-        .ans-btn {
-            display: block;
-            width: 100%;
-            margin: 10px 0;
-            padding: 10px;
-            background-color: #333;
-            color: white;
-            border: 2px solid #555;
-            font-family: 'Prompt', sans-serif;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        .ans-btn:hover { background-color: #444; }
-        
-        .leaderboard-list {
-            list-style: none;
-            padding: 0;
-            width: 80%;
-            max-width: 400px;
-            max-height: 50vh;
-            overflow-y: auto;
-            margin-bottom: 20px;
-        }
-        .leaderboard-item {
-            display: flex;
-            justify-content: space-between;
-            background: #222;
-            margin: 5px 0;
-            padding: 10px;
-            border: 1px solid #444;
-            font-family: 'Prompt', sans-serif;
-        }
-        .leaderboard-item span:first-child { color: #ffcc00; font-family: 'Press Start 2P', cursive; font-size: 10px;}
-        
-        input[type="text"] {
-            padding: 10px;
-            font-size: 16px;
-            font-family: 'Prompt', sans-serif;
-            margin-bottom: 20px;
-            width: 80%;
-            max-width: 300px;
-            text-align: center;
-            color: #000000;
-            background-color: #ffffff;
-            border: 2px solid #ffcc00;
-            border-radius: 5px;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="game-container">
-        <canvas id="gameCanvas"></canvas>
-        
+<!-- ... existing code ... -->
         <div id="hud">
             <div>
-                <span id="level-display">LEVEL: <span id="level">1</span>/3</span>
+                <span id="level-display">LEVEL: <span id="level">1</span>/4</span>
                 <span id="score-display">SCORE: <span id="score">0</span></span>
             </div>
             <div id="multiplier-display" class="hidden">อมตะพุ่งชน! (<span id="timer">0</span>s)</div>
@@ -160,365 +9,125 @@
 
         <!-- หน้าเมนูหลัก -->
         <div id="menu-screen" class="overlay">
-            <h1 style="color:#ffcc00; font-size: 30px; text-align: center; margin-bottom: 20px; text-shadow: 4px 4px #ff0055;">TOMB OF<br>THE CODE</h1>
-            
-            <p style="color: white; font-family: 'Prompt', sans-serif; margin-bottom: 10px;">เลือกตัวละคร:</p>
-            <div id="char-select" style="display:flex; justify-content:center; gap:15px; margin-bottom: 20px; height: 46px;">
-            </div>
-
-            <input type="text" id="playerNameInput" placeholder="ใส่ชื่อของคุณ..." maxlength="15">
-            <button class="btn" id="startBtn">PLAY</button>
-            <button class="btn" id="leaderboardBtn" style="font-size: 12px; background-color: #333; color: white;">LEADERBOARD</button>
-        </div>
-
-        <!-- หน้าคำถามวิทยาการคำนวณ -->
-        <div id="question-screen" class="overlay hidden prompt-font">
-            <div class="question-box">
-                <h2 style="color:#ff0055; margin-bottom: 15px; font-family: 'Press Start 2P', cursive; font-size: 16px;">ANSWER TO SURVIVE!</h2>
-                <p id="question-text" style="font-size: 18px; margin-bottom: 20px; line-height: 1.5;"></p>
-                <div id="answers-container">
-                    <!-- ปุ่มคำตอบจะถูกสร้างที่นี่ -->
-                </div>
-            </div>
-        </div>
-
+<!-- ... existing code ... -->
         <!-- หน้าจอจบเกม (ชนะ) -->
         <div id="game-clear-screen" class="overlay hidden">
             <h2 style="color:#00ff00; font-size: 40px; margin-bottom: 10px; text-shadow: 2px 2px #000;">YOU ESCAPED!</h2>
             <p style="margin-bottom: 20px; font-size: 18px;">FINAL SCORE: <span id="clear-score" style="color:#ffcc00;">0</span></p>
-            <p style="margin-bottom: 30px; font-family: 'Prompt', sans-serif; font-size: 14px; text-align: center;">คุณพิชิตเขาวงกตโค้ดทั้ง 3 ด่านสำเร็จแล้ว!</p>
+            <p style="margin-bottom: 30px; font-family: 'Prompt', sans-serif; font-size: 14px; text-align: center;">คุณพิชิตเขาวงกตโค้ดทั้ง 4 ด่านสำเร็จแล้ว!</p>
             <button class="btn" id="playAgainBtn">PLAY AGAIN</button>
             <button class="btn" id="menuBtnClear" style="font-size: 12px; background-color: #333; color: white;">MENU</button>
         </div>
 
         <!-- หน้าจอจบเกม (แพ้) -->
         <div id="game-over-screen" class="overlay hidden">
-            <h2 style="color:red; font-size: 40px; margin-bottom: 10px;">GAME OVER</h2>
-            <p style="margin-bottom: 20px;">SCORE: <span id="final-score" style="color:#ffcc00;">0</span></p>
-            <button class="btn" id="restartBtn">RESTART</button>
+            <h2 style="color:#ff3333; font-size: 40px; margin-bottom: 10px; text-shadow: 2px 2px #000;">GAME OVER</h2>
+            <p style="margin-bottom: 20px; font-size: 18px;">SCORE: <span id="final-score" style="color:#ffcc00;">0</span></p>
+            <button class="btn" id="restartBtn">RESTART LEVEL</button>
             <button class="btn" id="menuBtn" style="font-size: 12px; background-color: #333; color: white;">MENU</button>
-        </div>
-
-        <!-- หน้าจอกระดานผู้นำ -->
-        <div id="leaderboard-screen" class="overlay hidden">
-            <h2 style="color:#ffcc00; margin-bottom: 20px;">TOP CODERS</h2>
-            <ul id="leaderboard-list" class="leaderboard-list">
-                <li style="text-align: center; font-family: 'Prompt', sans-serif;">กำลังโหลด...</li>
-            </ul>
-            <button class="btn" id="closeLeaderboardBtn">BACK</button>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const appId = window.__app_id || 'tomb-of-code-game-v3';
-        let db, auth;
-        let isFirebaseReady = false;
-
-        try {
-            if (typeof window.__firebase_config !== 'undefined') {
-                const firebaseConfig = JSON.parse(window.__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                signInAnonymously(auth).then(() => {
-                    console.log("Firebase Auth Success");
-                    isFirebaseReady = true;
-                    loadLeaderboard();
-                }).catch(e => console.error("Auth error", e));
-            }
-        } catch (e) {
-            console.error("Firebase init error", e);
-        }
-
-        window.saveGameScore = async (name, score) => {
-            if (!isFirebaseReady || !auth.currentUser) return;
-            try {
-                const scoreData = {
-                    name: name || "Anonymous",
-                    score: score,
-                    timestamp: new Date().getTime(),
-                    appId: appId
-                };
-                const scoresRef = collection(db, 'leaderboards'); 
-                await addDoc(scoresRef, scoreData);
-            } catch (e) {
-                console.error("Error saving score", e);
-            }
-        };
-
-        function loadLeaderboard() {
-            if (!isFirebaseReady || !auth.currentUser) return;
-            const listEl = document.getElementById('leaderboard-list');
-            try {
-                const scoresRef = collection(db, 'leaderboards');
-                const q = query(scoresRef, limit(100));
-
-                onSnapshot(q, (snapshot) => {
-                    let scores = [];
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        if (data && data.appId === appId && typeof data.score === 'number') {
-                            scores.push(data);
-                        }
-                    });
-                    
-                    scores.sort((a, b) => b.score - a.score);
-                    scores = scores.slice(0, 10);
-                    
-                    listEl.innerHTML = '';
-                    if (scores.length === 0) {
-                        listEl.innerHTML = '<li style="text-align: center; font-family: \'Prompt\', sans-serif;">ยังไม่มีข้อมูล</li>';
-                        return;
-                    }
-                    
-                    scores.forEach((s, index) => {
-                        const li = document.createElement('li');
-                        li.className = 'leaderboard-item';
-                        li.innerHTML = `<span>#${index+1} ${s.name}</span> <span style="color:#ffcc00;">${s.score}</span>`;
-                        listEl.appendChild(li);
-                    });
-                }, (error) => {
-                    console.error("Error loading leaderboard:", error);
-                });
-            } catch(e) {
-                 console.error("Query setup error", e);
-            }
-        }
-
+    <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
         let gameState = 'menu'; 
         let score = 0;
         let level = 1;
-        const MAX_LEVEL = 3; // จบที่ด่าน 3
+        const MAX_LEVEL = 4; // จบที่ด่าน 4
         let playerName = "Player";
         let isMultiplierActive = false;
-        let multiplierTimer = 0;
-        const MULTIPLIER_DURATION = 4000; 
-        let lastTime = 0;
-        let mapData = [];
         
-        let selectedCharKey = 'mask'; 
-        
-        // ตัวละคร Pixel Art 8x8 (1=สีหลัก, 2=สีดำ(ตา/ปาก), 0=ว่าง)
-        const PIXEL_CHARS = {
-            'mask': { 
-                color: '#ffcc00', 
-                grid: [
-                    [0,1,1,1,1,1,1,0],
-                    [1,1,1,1,1,1,1,1],
-                    [1,2,2,1,1,2,2,1],
-                    [1,2,2,1,1,2,2,1],
-                    [1,1,1,1,1,1,1,1],
-                    [0,1,2,2,2,2,1,0],
-                    [0,1,1,1,1,1,1,0],
-                    [0,1,1,0,0,1,1,0]
-                ]
-            },
-            'dog': {
-                color: '#ff9900', 
-                grid: [
-                    [1,0,0,0,0,0,0,1],
-                    [1,1,1,1,1,1,1,1],
-                    [1,1,1,1,1,1,1,1],
-                    [1,2,1,1,1,1,2,1],
-                    [1,1,1,2,2,1,1,1],
-                    [1,1,1,1,1,1,1,1],
-                    [0,1,1,1,1,1,1,0],
-                    [0,1,0,0,0,0,1,0]
-                ]
-            },
-            'ghost': {
-                color: '#ffffff', 
-                grid: [
-                    [0,1,1,1,1,1,1,0],
-                    [1,1,1,1,1,1,1,1],
-                    [1,2,2,1,1,2,2,1],
-                    [1,2,2,1,1,2,2,1],
-                    [1,1,1,2,2,1,1,1],
-                    [1,1,1,2,2,1,1,1],
-                    [1,1,1,1,1,1,1,1],
-                    [1,0,1,0,0,1,0,1]
-                ]
-            },
-            'slime': {
-                color: '#00ffcc', 
-                grid: [
-                    [0,0,0,0,0,0,0,0],
-                    [0,0,1,1,1,1,0,0],
-                    [0,1,1,1,1,1,1,0],
-                    [1,1,2,1,1,2,1,1],
-                    [1,1,1,1,1,1,1,1],
-                    [1,1,1,1,1,1,1,1],
-                    [1,1,1,1,1,1,1,1],
-                    [0,1,1,1,1,1,1,0]
-                ]
-            }
-        };
-
-        function initCharSelectUI() {
-            const container = document.getElementById('char-select');
-            container.innerHTML = ''; 
-            
-            Object.keys(PIXEL_CHARS).forEach(key => {
-                let pCanvas = document.createElement('canvas');
-                pCanvas.width = 40;
-                pCanvas.height = 40;
-                pCanvas.className = 'char-btn';
-                pCanvas.style.cursor = 'pointer';
-                pCanvas.style.border = key === selectedCharKey ? '3px solid white' : '3px solid transparent';
-                pCanvas.style.backgroundColor = '#222';
-                pCanvas.dataset.key = key;
-                
-                let cCtx = pCanvas.getContext('2d');
-                let pSize = 40 / 8;
-                let grid = PIXEL_CHARS[key].grid;
-                
-                for(let r=0; r<8; r++) {
-                    for(let c=0; c<8; c++) {
-                        if(grid[r][c] === 1) {
-                            cCtx.fillStyle = PIXEL_CHARS[key].color;
-                            cCtx.fillRect(c*pSize, r*pSize, pSize, pSize);
-                        } else if (grid[r][c] === 2) {
-                            cCtx.fillStyle = '#000';
-                            cCtx.fillRect(c*pSize, r*pSize, pSize, pSize);
-                        }
-                    }
-                }
-                
-                pCanvas.addEventListener('click', () => {
-                    document.querySelectorAll('.char-btn').forEach(b => b.style.border = '3px solid transparent');
-                    pCanvas.style.border = '3px solid white';
-                    selectedCharKey = key;
-                });
-                
-                container.appendChild(pCanvas);
-            });
-        }
-
-        const questions = [
-            {
-                q: "ข้อใดคือความหมายของ 'อัลกอริทึม (Algorithm)'?",
-                options: ["ลำดับขั้นตอนการทำงานอย่างเป็นระบบ", "คอมพิวเตอร์รุ่นใหม่", "ไวรัสชนิดหนึ่ง", "โปรแกรมดูหนัง"],
-                ans: 0
-            },
-            {
-                q: "ลักษณะของอัลกอริทึมที่ดีคือข้อใด?",
-                options: ["ซับซ้อนเข้าใจยาก", "มีจุดเริ่มต้นและจุดสิ้นสุดชัดเจน", "ไม่มีวันจบการทำงาน", "เขียนด้วยภาษาอังกฤษเท่านั้น"],
-                ans: 1
-            },
-            {
-                q: "สิ่งใดในชีวิตประจำวันที่คล้ายกับอัลกอริทึมมากที่สุด?",
-                options: ["การร้องเพลงตามอารมณ์", "สูตรและขั้นตอนการทำอาหาร", "การนอนหลับ", "การดูทีวี"],
-                ans: 1
-            },
-            {
-                q: "ประโยชน์ของการคิดแบบอัลกอริทึมคืออะไร?",
-                options: ["ทำให้เล่นเกมเก่งขึ้น", "แก้ปัญหาได้เป็นระบบและลดข้อผิดพลาด", "ป้องกันไวรัสเข้าเครื่อง", "ทำให้คอมพิวเตอร์เร็วขึ้น"],
-                ans: 1
-            }
-        ];
-        
-        let currentQuestion = null;
-
-        const TILE_SIZE = 40;
-        let COLS = 15; 
-        let ROWS = 25;
-
-        const COLORS = {
-            bg: '#000000',
-            wallEdge: '#ff0055', 
-            wallFill: '#330011',
-            dot: '#ffffaa',
-            portal: '#00ff00' 
-        };
-
-        const player = {
-            x: 0, y: 0,
-            px: 0, py: 0, 
-            vx: 0, vy: 0,
-            isMoving: false,
-            size: TILE_SIZE * 0.7
-        };
-
-        let dots = []; 
-        let stars = []; 
-        let enemies = []; 
-        let exitPortal = {x: 0, y: 0}; 
-        
-        let touchStartX = 0;
-        let touchStartY = 0;
-
-        const uiScore = document.getElementById('score');
-        const uiLevel = document.getElementById('level');
         const uiMultiplier = document.getElementById('multiplier-display');
         const uiTimer = document.getElementById('timer');
 
-        // แก้ไขแผนที่: นำ 'E' มาไว้บนทางเดิน ('.') เพื่อให้เดินเข้าได้ ไม่ทับซ้อนกับกำแพง ('1')
         const PREDEFINED_MAPS = [
-            // ด่านที่ 1: แนะนำวิธีการเล่น
+            // ด่านที่ 1: แนะนำวิธีการเล่น (ง่ายสุด)
             [
                 "111111111111111",
                 "1P...........*1",
                 "1111111111111.1",
-                "1*............1",
+                "1.............1",
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
-                "1*............1",
+                "1.............1",
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
-                "1*............1",
+                "1.............1",
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
-                "1*............1",
+                "1.............1",
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
-                "1*............1",
-                "1.1111111111111",
                 "1.............1",
-                "1111111111111.1",
-                "1.............E1",
-                "111111111111111"
-            ],
-            // ด่านที่ 2: เริ่มมีความท้าทาย
-            [
-                "111111111111111",
-                "1P...........*1",
-                "1111111111111.1",
-                "1*......-.....1",
-                "1.1111111111111",
-                "1.............1",
-                "1111111111111.1",
-                "1*......-.....1",
-                "1.1111111111111",
-                "1.............1",
-                "1111111111111.1",
-                "1*......-.....1",
-                "1.1111111111111",
-                "1.............1",
-                "1111111111111.1",
-                "1*......-.....1",
-                "1.1111111111111",
-                "1.............1",
-                "1111111111111.1",
-                "1*......-.....1",
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
                 "1E............1",
                 "111111111111111"
             ],
-            // ด่านที่ 3: บททดสอบสุดท้าย
+            // ด่านที่ 2: เริ่มมีค้างคาวกีดขวาง
+            [
+                "111111111111111",
+                "1P...........*1",
+                "1111111111111.1",
+                "1.......-.....1",
+                "1.1111111111111",
+                "1.............1",
+                "1111111111111.1",
+                "1.......-.....1",
+                "1.1111111111111",
+                "1.............1",
+                "1111111111111.1",
+                "1*......-.....1",
+                "1.1111111111111",
+                "1.............1",
+                "1111111111111.1",
+                "1.......-.....1",
+                "1.1111111111111",
+                "1.............1",
+                "1111111111111.1",
+                "1.......-.....1",
+                "1.1111111111111",
+                "1.............1",
+                "1111111111111.1",
+                "1.............E1",
+                "111111111111111"
+            ],
+            // ด่านที่ 3: เขาวงกตซับซ้อน (เน้นการเลี้ยวหาทางออก ลดจำนวนปีศาจลง)
+            [
+                "111111111111111",
+                "1P..1.........1",
+                "111.1.1111111.1",
+                "1...1.......1.1",
+                "1.111111111.1.1",
+                "1.........1.1.1",
+                "111111111.1.1.1",
+                "1*........1.1.1",
+                "1.111111111.1.1",
+                "1.1.........1.1",
+                "1.1.111111111.1",
+                "1.1.........1.1",
+                "1.111111111.1.1",
+                "1.1...*...1.1.1",
+                "1.1.11111.1.1.1",
+                "1.1.....1.1.1.1",
+                "1.11111.1.1.1.1",
+                "1.......1...1.1",
+                "1111111111111.1",
+                "1.............1",
+                "1.1111111111111",
+                "1.............1",
+                "1111111111111.1",
+                "1E..........-.1",
+                "111111111111111"
+            ],
+            // ด่านที่ 4: บททดสอบสุดท้าย (ฝูงค้างคาว)
             [
                 "111111111111111",
                 "1P....*.....-.1",
@@ -549,440 +158,7 @@
         ];
 
         function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize);
+<!-- ... existing code ... -->
+```
 
-        function generateMap() {
-            let mapIndex = level - 1;
-            if (mapIndex >= PREDEFINED_MAPS.length) mapIndex = PREDEFINED_MAPS.length - 1;
-            
-            const layout = PREDEFINED_MAPS[mapIndex];
-            
-            mapData = Array(ROWS).fill(null).map(() => Array(COLS).fill(1));
-            dots = [];
-            stars = [];
-            enemies = [];
-
-            for (let y = 0; y < layout.length; y++) {
-                let row = layout[y];
-                for (let x = 0; x < row.length; x++) {
-                    let char = row[x];
-                    
-                    if (char === '1') {
-                        mapData[y][x] = 1;
-                    } else {
-                        mapData[y][x] = 0;
-                        
-                        if (char === 'P') {
-                            player.x = x;
-                            player.y = y;
-                        } else if (char === 'E') {
-                            exitPortal = {x: x, y: y};
-                        } else if (char === '.') {
-                            dots.push({x: x, y: y, collected: false});
-                        } else if (char === '*') {
-                            stars.push({x: x, y: y, collected: false});
-                        } else if (char === '-') {
-                            // ค้างคาวแนวนอน
-                            enemies.push({
-                                x: x, y: y, 
-                                px: x * TILE_SIZE, py: y * TILE_SIZE,
-                                vx: 1, vy: 0,
-                                size: TILE_SIZE * 0.6
-                            });
-                        } else if (char === 'b') {
-                            // ค้างคาวแนวตั้ง
-                            enemies.push({
-                                x: x, y: y, 
-                                px: x * TILE_SIZE, py: y * TILE_SIZE,
-                                vx: 0, vy: 1,
-                                size: TILE_SIZE * 0.6
-                            });
-                        }
-                    }
-                }
-            }
-
-            // รีเซ็ตตำแหน่งผู้เล่นแบบ Pixel
-            player.px = player.x * TILE_SIZE;
-            player.py = player.y * TILE_SIZE;
-            player.vx = 0;
-            player.vy = 0;
-            player.isMoving = false;
-        }
-
-        function isWall(x, y) {
-            if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return true;
-            return mapData[y][x] === 1;
-        }
-
-        function movePlayer(dx, dy) {
-            if (player.isMoving || gameState !== 'playing') return;
-            if (!isWall(player.x + dx, player.y + dy)) {
-                player.vx = dx;
-                player.vy = dy;
-                player.isMoving = true;
-            }
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp' || e.key === 'w') movePlayer(0, -1);
-            if (e.key === 'ArrowDown' || e.key === 's') movePlayer(0, 1);
-            if (e.key === 'ArrowLeft' || e.key === 'a') movePlayer(-1, 0);
-            if (e.key === 'ArrowRight' || e.key === 'd') movePlayer(1, 0);
-        });
-
-        canvas.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, {passive: false});
-
-        canvas.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false});
-
-        canvas.addEventListener('touchend', e => {
-            if (gameState !== 'playing') return;
-            let dx = e.changedTouches[0].screenX - touchStartX;
-            let dy = e.changedTouches[0].screenY - touchStartY;
-            
-            if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
-                if (Math.abs(dx) > Math.abs(dy)) movePlayer(dx > 0 ? 1 : -1, 0);
-                else movePlayer(0, dy > 0 ? 1 : -1);
-            }
-        });
-
-        function update(dt) {
-            if (gameState !== 'playing') return;
-
-            // นับถอยหลังบัฟอมตะ
-            if (isMultiplierActive) {
-                multiplierTimer -= dt;
-                uiTimer.innerText = (multiplierTimer / 1000).toFixed(1);
-                if (multiplierTimer <= 0) {
-                    isMultiplierActive = false;
-                    uiMultiplier.classList.add('hidden');
-                }
-            }
-
-            // ผู้เล่นเคลื่อนที่
-            if (player.isMoving) {
-                const speed = 700 * (dt / 1000); 
-                let targetPx = player.x * TILE_SIZE;
-                let targetPy = player.y * TILE_SIZE;
-                
-                if (Math.abs(player.px - targetPx) < speed && Math.abs(player.py - targetPy) < speed) {
-                    player.px = targetPx;
-                    player.py = targetPy;
-                    player.x += player.vx;
-                    player.y += player.vy;
-                    
-                    if (isWall(player.x, player.y)) {
-                        player.x -= player.vx;
-                        player.y -= player.vy;
-                        player.vx = 0;
-                        player.vy = 0;
-                        player.isMoving = false;
-                    }
-                } else {
-                    player.px += player.vx * speed;
-                    player.py += player.vy * speed;
-                }
-                checkCollisions();
-            }
-
-            // ค้างคาวเคลื่อนที่
-            const enemySpeed = 150 * (dt / 1000); 
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                let en = enemies[i];
-                let targetPx = en.x * TILE_SIZE;
-                let targetPy = en.y * TILE_SIZE;
-                
-                if (Math.abs(en.px - targetPx) < enemySpeed && Math.abs(en.py - targetPy) < enemySpeed) {
-                    en.px = targetPx;
-                    en.py = targetPy;
-                    if (isWall(en.x + en.vx, en.y + en.vy)) {
-                        en.vx *= -1;
-                        en.vy *= -1;
-                    } else {
-                        en.x += en.vx;
-                        en.y += en.vy;
-                    }
-                } else {
-                    en.px += en.vx * enemySpeed;
-                    en.py += en.vy * enemySpeed;
-                }
-
-                const hitDist = TILE_SIZE * 0.7;
-                if (Math.abs(en.px - player.px) < hitDist && Math.abs(en.py - player.py) < hitDist) {
-                    if (isMultiplierActive) {
-                        enemies.splice(i, 1);
-                        score += 50; 
-                        uiScore.innerText = score;
-                    } else {
-                        gameOver();
-                    }
-                }
-            }
-
-            // เปลี่ยนด่านเมื่อถึงพอร์ทัลสีเขียว
-            if (!player.isMoving && player.x === exitPortal.x && player.y === exitPortal.y) {
-                score += 100; 
-                if (level >= MAX_LEVEL) {
-                    // ครบ 3 ด่าน ชนะเกม
-                    gameClear(); 
-                } else {
-                    level++;
-                    uiScore.innerText = score;
-                    uiLevel.innerText = level;
-                    isMultiplierActive = true; // แถมอมตะให้ตอนขึ้นด่านใหม่
-                    multiplierTimer = MULTIPLIER_DURATION;
-                    uiMultiplier.classList.remove('hidden');
-                    generateMap();
-                }
-            }
-        }
-
-        function checkCollisions() {
-            for (let i = 0; i < dots.length; i++) {
-                let d = dots[i];
-                if (!d.collected && player.x === d.x && player.y === d.y) {
-                    d.collected = true;
-                    let pts = isMultiplierActive ? 20 : 10;
-                    score += pts;
-                    uiScore.innerText = score;
-                }
-            }
-            for (let i = 0; i < stars.length; i++) {
-                let s = stars[i];
-                if (!s.collected && player.x === s.x && player.y === s.y) {
-                    s.collected = true;
-                    showQuestion();
-                }
-            }
-        }
-
-        function showQuestion() {
-            gameState = 'question';
-            currentQuestion = questions[Math.floor(Math.random() * questions.length)];
-            document.getElementById('question-text').innerText = currentQuestion.q;
-            const ansContainer = document.getElementById('answers-container');
-            ansContainer.innerHTML = '';
-            
-            currentQuestion.options.forEach((opt, index) => {
-                let btn = document.createElement('button');
-                btn.className = 'ans-btn';
-                btn.innerText = opt;
-                btn.onclick = () => handleAnswer(index);
-                ansContainer.appendChild(btn);
-            });
-            document.getElementById('question-screen').classList.remove('hidden');
-        }
-
-        function handleAnswer(selectedIndex) {
-            document.getElementById('question-screen').classList.add('hidden');
-            if (selectedIndex === currentQuestion.ans) {
-                isMultiplierActive = true;
-                multiplierTimer = MULTIPLIER_DURATION;
-                uiMultiplier.classList.remove('hidden');
-            }
-            gameState = 'playing';
-        }
-
-        function render() {
-            ctx.fillStyle = COLORS.bg;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            if (gameState !== 'playing' && gameState !== 'question') return;
-
-            let camX = player.px - canvas.width / 2 + TILE_SIZE / 2;
-            let camY = player.py - canvas.height / 2 + TILE_SIZE / 2;
-            
-            ctx.save();
-            ctx.translate(-camX, -camY);
-
-            // วาดกำแพง
-            for (let y = 0; y < ROWS; y++) {
-                for (let x = 0; x < COLS; x++) {
-                    if (mapData[y][x] === 1) {
-                        ctx.fillStyle = COLORS.wallFill;
-                        ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                        ctx.strokeStyle = COLORS.wallEdge;
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(x*TILE_SIZE + 2, y*TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                        ctx.fillStyle = COLORS.wallEdge;
-                        ctx.fillRect(x*TILE_SIZE + 10, y*TILE_SIZE + 10, 4, 4);
-                        ctx.fillRect(x*TILE_SIZE + TILE_SIZE - 14, y*TILE_SIZE + TILE_SIZE - 14, 4, 4);
-                    }
-                }
-            }
-
-            // วาดจุดออกสีเขียว
-            ctx.fillStyle = COLORS.portal;
-            ctx.fillRect(exitPortal.x * TILE_SIZE + 5, exitPortal.y * TILE_SIZE + 5, TILE_SIZE - 10, TILE_SIZE - 10);
-            ctx.strokeStyle = '#fff';
-            ctx.strokeRect(exitPortal.x * TILE_SIZE + 8, exitPortal.y * TILE_SIZE + 8, TILE_SIZE - 16, TILE_SIZE - 16);
-
-            // วาดจุดคะแนน
-            dots.forEach(d => {
-                if (!d.collected) {
-                    ctx.fillStyle = COLORS.dot;
-                    ctx.fillRect(d.x * TILE_SIZE + TILE_SIZE/2 - 3, d.y * TILE_SIZE + TILE_SIZE/2 - 3, 6, 6);
-                }
-            });
-            
-            // วาดดาว
-            stars.forEach(s => {
-                if(!s.collected) {
-                    ctx.fillStyle = '#00ffff';
-                    let sx = s.x * TILE_SIZE + TILE_SIZE/2;
-                    let sy = s.y * TILE_SIZE + TILE_SIZE/2;
-                    ctx.beginPath();
-                    ctx.moveTo(sx, sy - 8);
-                    ctx.lineTo(sx + 8, sy + 8);
-                    ctx.lineTo(sx - 8, sy + 8);
-                    ctx.fill();
-                }
-            });
-
-            // วาดค้างคาว
-            enemies.forEach(en => {
-                let px = en.px + TILE_SIZE / 2;
-                let py = en.py + TILE_SIZE / 2;
-                let half = en.size / 2;
-                
-                ctx.fillStyle = '#8800ff';
-                ctx.beginPath();
-                ctx.arc(px, py, half, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.beginPath();
-                ctx.moveTo(px - half, py);
-                ctx.lineTo(px - half - 10, py - 10);
-                ctx.lineTo(px - half - 5, py + 5);
-                ctx.fill();
-                
-                ctx.beginPath();
-                ctx.moveTo(px + half, py);
-                ctx.lineTo(px + half + 10, py - 10);
-                ctx.lineTo(px + half + 5, py + 5);
-                ctx.fill();
-
-                ctx.fillStyle = '#ff0000';
-                ctx.fillRect(px - 6, py - 2, 4, 4);
-                ctx.fillRect(px + 2, py - 2, 4, 4);
-            });
-
-            // วาดผู้เล่น (Pixel Art 8x8)
-            let offset = (TILE_SIZE - player.size) / 2;
-            let px = player.px + offset;
-            let py = player.py + offset;
-            let charData = PIXEL_CHARS[selectedCharKey];
-            let grid = charData.grid;
-            let pSize = player.size / 8;
-            // กระพริบถ้าเป็นอมตะ
-            let isFlashing = isMultiplierActive && Math.floor(Date.now() / 100) % 2 === 0;
-
-            for(let r=0; r<8; r++) {
-                for(let c=0; c<8; c++) {
-                    if(grid[r][c] === 1) {
-                        ctx.fillStyle = isFlashing ? '#ffffff' : charData.color;
-                        ctx.fillRect(px + c*pSize, py + r*pSize, pSize, pSize);
-                    } else if (grid[r][c] === 2) {
-                        ctx.fillStyle = '#000000';
-                        ctx.fillRect(px + c*pSize, py + r*pSize, pSize, pSize);
-                    }
-                }
-            }
-            
-            // เอฟเฟกต์หางตอนพุ่ง
-            if (player.isMoving) {
-                ctx.fillStyle = charData.color;
-                ctx.globalAlpha = 0.3;
-                let size = player.size;
-                if (player.vx > 0) ctx.fillRect(px - 20, py, 20, size); 
-                else if (player.vx < 0) ctx.fillRect(px + size, py, 20, size); 
-                else if (player.vy > 0) ctx.fillRect(px, py - 20, size, 20); 
-                else if (player.vy < 0) ctx.fillRect(px, py + size, size, 20); 
-                ctx.globalAlpha = 1.0;
-            }
-
-            ctx.restore();
-        }
-
-        function gameLoop(timestamp) {
-            let dt = timestamp - lastTime;
-            lastTime = timestamp;
-            update(dt);
-            render();
-            requestAnimationFrame(gameLoop);
-        }
-
-        function startGame() {
-            const nameInput = document.getElementById('playerNameInput').value.trim();
-            if (nameInput) playerName = nameInput;
-            
-            document.getElementById('menu-screen').classList.add('hidden');
-            document.getElementById('game-over-screen').classList.add('hidden');
-            document.getElementById('game-clear-screen').classList.add('hidden');
-            
-            score = 0;
-            level = 1; // เริ่มด่าน 1
-            uiScore.innerText = score;
-            uiLevel.innerText = level;
-            isMultiplierActive = false;
-            uiMultiplier.classList.add('hidden');
-            
-            generateMap();
-            gameState = 'playing';
-        }
-
-        function gameClear() {
-            gameState = 'gameclear';
-            document.getElementById('game-clear-screen').classList.remove('hidden');
-            score += 500; // โบนัสชนะด่าน 3
-            document.getElementById('clear-score').innerText = score;
-            uiScore.innerText = score;
-            if (score > 0) window.saveGameScore(playerName, score);
-        }
-
-        function gameOver() {
-            gameState = 'gameover';
-            document.getElementById('game-over-screen').classList.remove('hidden');
-            document.getElementById('final-score').innerText = score;
-            if (score > 0) window.saveGameScore(playerName, score);
-        }
-
-        document.getElementById('startBtn').addEventListener('click', startGame);
-        document.getElementById('restartBtn').addEventListener('click', startGame);
-        document.getElementById('playAgainBtn').addEventListener('click', startGame);
-        
-        document.getElementById('menuBtnClear').addEventListener('click', () => {
-            document.getElementById('game-clear-screen').classList.add('hidden');
-            document.getElementById('menu-screen').classList.remove('hidden');
-            gameState = 'menu';
-            render();
-        });
-        
-        document.getElementById('leaderboardBtn').addEventListener('click', () => {
-            document.getElementById('leaderboard-screen').classList.remove('hidden');
-        });
-        
-        document.getElementById('closeLeaderboardBtn').addEventListener('click', () => {
-            document.getElementById('leaderboard-screen').classList.add('hidden');
-        });
-        
-        document.getElementById('menuBtn').addEventListener('click', () => {
-            document.getElementById('game-over-screen').classList.add('hidden');
-            document.getElementById('menu-screen').classList.remove('hidden');
-            gameState = 'menu';
-            render();
-        });
-
-        initCharSelectUI(); 
-        resize();
-        requestAnimationFrame(gameLoop);
-
-    </script>
-</body>
-</html>
+ตอนนี้ด่านที่ 3 จะเป็นทางเดินคดเคี้ยวที่ไม่มีค้างคาวดักอยู่ระหว่างทางเลย (มีแค่ตัวเดียวเฝ้าประตูทางออก) ผู้เล่นจะต้องใช้ไหวพริบในการสไลด์ตัวตามผนังเพื่อหาทางเข้าไปให้ถึงใจกลางแล้วหาทางออกให้ได้ครับ ลองทดสอบดูได้เลยครับ!
