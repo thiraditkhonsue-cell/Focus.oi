@@ -3,1102 +3,972 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>เกม AR: อัลกอริทึมในชีวิตประจำวัน</title>
-    
-    <!-- Tailwind CSS -->
+    <title>Tomb of the Code</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- MediaPipe Hands -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; touch-action: none; font-family: 'Sarabun', sans-serif; }
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Press Start 2P', cursive;
+            color: #fff;
+            touch-action: none;
+        }
+        .prompt-font {
+            font-family: 'Prompt', sans-serif;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            display: block;
+            background-color: #111;
+            image-rendering: pixelated;
+        }
         
-        /* Glassmorphism Classes for HTML UI */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        .hidden { display: none !important; }
+        .btn {
+            background-color: #ffcc00;
+            color: #000;
+            padding: 15px 30px;
+            font-size: 16px;
+            border: 4px solid #fff;
+            cursor: pointer;
+            margin: 10px;
+            text-transform: uppercase;
+            font-family: 'Press Start 2P', cursive;
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.95); }
+        
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 5;
+            pointer-events: none;
+            font-size: 14px;
+            text-shadow: 2px 2px 0 #000;
+        }
+        #score-display { color: #ffcc00; }
+        #level-display { color: #00ffff; margin-right: 15px; }
+        #multiplier-display {
+            color: #00ff00;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .question-box {
+            background-color: #222;
+            border: 4px solid #ff0055;
+            padding: 20px;
+            max-width: 90%;
+            width: 400px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .ans-btn {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            border: 2px solid #555;
+            font-family: 'Prompt', sans-serif;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .ans-btn:hover { background-color: #444; }
+        
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+            width: 80%;
+            max-width: 400px;
+            max-height: 50vh;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            background: #222;
+            margin: 5px 0;
+            padding: 10px;
+            border: 1px solid #444;
+            font-family: 'Prompt', sans-serif;
+        }
+        .leaderboard-item span:first-child { color: #ffcc00; font-family: 'Press Start 2P', cursive; font-size: 10px;}
+        
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            font-family: 'Prompt', sans-serif;
+            margin-bottom: 20px;
+            width: 80%;
+            max-width: 300px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
 
-    <!-- HTML UI Layer (Start Screen) -->
-    <div id="htmlUiContainer" class="absolute inset-0 z-50 flex items-center justify-center pointer-events-auto">
-        <div class="glass-panel p-8 md:p-12 rounded-3xl text-center max-w-lg mx-4">
-            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-md">เรียนรู้อัลกอริทึม</h1>
-            <p class="text-white/90 text-lg mb-8">เรียงลำดับขั้นตอนการแก้ปัญหาในชีวิตประจำวัน</p>
-            
-            <div id="registerForm" class="flex flex-col gap-3 mb-6">
-                <input type="text" id="inpName" placeholder="ชื่อ - นามสกุล" class="px-4 py-3 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <input type="text" id="inpClass" placeholder="ชั้นเรียน (เช่น ป.4/1)" class="px-4 py-3 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <input type="number" id="inpRoll" placeholder="เลขที่" class="px-4 py-3 rounded-xl bg-white/20 text-white placeholder-white/60 border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <p id="formError" class="text-red-400 text-sm hidden font-bold">กรุณากรอกข้อมูลให้ครบถ้วนก่อนเริ่มเกม</p>
-            </div>
-
-            <div class="bg-black/30 rounded-xl p-4 mb-8 text-left text-white/80 text-sm">
-                <p class="font-bold text-white mb-2 text-base">วิธีเล่น:</p>
-                <ul class="list-disc pl-5 space-y-1">
-                    <li>ใช้ <b>กล้อง</b>: ชูมือขึ้นมา เล็งเป้าหมาย แล้ว <b>"จีบนิ้ว" (นิ้วโป้งแตะนิ้วชี้)</b> เพื่อหยิบการ์ด</li>
-                    <li>ใช้ <b>เมาส์/สัมผัส</b>: คลิกและลากการ์ดได้ตามปกติ</li>
-                    <li>นำการ์ดไปวางเรียงในช่องด้านล่างให้ถูกต้องตามลำดับ</li>
-                </ul>
-            </div>
-
-            <div class="flex flex-col gap-4 justify-center">
-                <button id="btnStartInit" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white font-bold py-4 px-10 rounded-full text-xl shadow-lg transform transition hover:scale-105 active:scale-95">
-                    เข้าสู่เกม (Start)
-                </button>
-                <button id="btnShowLeaderboard" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold py-3 px-10 rounded-full text-lg shadow-lg transform transition hover:scale-105 active:scale-95">
-                    🏆 ดูอันดับคะแนน
-                </button>
-            </div>
-            <p class="text-white/50 text-xs mt-4" id="loadingText" style="display: none;">กำลังโหลด AI และกล้อง...</p>
-        </div>
-    </div>
-
-    <!-- Leaderboard Modal -->
-    <div id="leaderboardModal" class="hidden absolute inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm pointer-events-auto">
-        <div class="glass-panel p-6 rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
-            <h2 class="text-3xl font-bold text-white mb-4 text-center drop-shadow-md">🏆 อันดับคะแนน</h2>
-            <div id="leaderboardList" class="flex-1 overflow-y-auto pr-2 space-y-2">
-                <!-- Scores go here -->
-            </div>
-            <button id="btnCloseLeaderboard" class="mt-6 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95">ปิด</button>
-        </div>
-    </div>
-
-    <!-- Game Clear UI -->
-    <div id="gameClearUiContainer" class="hidden absolute inset-0 z-50 flex items-center justify-center pointer-events-auto">
-        <div class="glass-panel p-8 md:p-12 rounded-3xl text-center max-w-lg mx-4 flex flex-col items-center">
-            <h1 class="text-5xl font-bold text-amber-400 mb-2 drop-shadow-md">All Clear!</h1>
-            <p class="text-white text-xl mb-6" id="finalScoreText"></p>
-            <p class="text-white/70 text-sm mb-8" id="saveStatusText">กำลังบันทึกคะแนน...</p>
-            <div class="flex flex-col sm:flex-row gap-4 w-full justify-center">
-                 <button id="btnRestart" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition hover:scale-105 active:scale-95">🔄 เล่นอีกครั้ง</button>
-                 <button id="btnShowLeaderboardEnd" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition hover:scale-105 active:scale-95">🏆 ดูอันดับคะแนน</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hidden Video Element for MediaPipe -->
-    <video id="input_video" class="hidden" autoplay playsinline></video>
-
-    <!-- Main Game Canvas -->
-    <canvas id="output_canvas" class="absolute inset-0 w-full h-full z-10 block"></canvas>
-
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-    
-    let db, auth;
-    if (firebaseConfig) {
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-    }
-
-    // สร้างฟังก์ชัน Global สำหรับบันทึกคะแนน
-    window.saveScoreToFirebase = async function(score, studentInfo) {
-        if (!db || !auth) return { success: false, error: "Firebase not configured" };
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
         
+        <div id="hud">
+            <div>
+                <span id="level-display">LEVEL: <span id="level">1</span>/3</span>
+                <span id="score-display">SCORE: <span id="score">0</span></span>
+            </div>
+            <div id="multiplier-display" class="hidden">อมตะพุ่งชน! (<span id="timer">0</span>s)</div>
+        </div>
+
+        <!-- หน้าเมนูหลัก -->
+        <div id="menu-screen" class="overlay">
+            <h1 style="color:#ffcc00; font-size: 30px; text-align: center; margin-bottom: 20px; text-shadow: 4px 4px #ff0055;">TOMB OF<br>THE CODE</h1>
+            
+            <p style="color: white; font-family: 'Prompt', sans-serif; margin-bottom: 10px;">เลือกตัวละคร:</p>
+            <div id="char-select" style="display:flex; justify-content:center; gap:15px; margin-bottom: 20px; height: 46px;">
+            </div>
+
+            <input type="text" id="playerNameInput" placeholder="ใส่ชื่อของคุณ..." maxlength="15">
+            <button class="btn" id="startBtn">PLAY</button>
+            <button class="btn" id="leaderboardBtn" style="font-size: 12px; background-color: #333; color: white;">LEADERBOARD</button>
+        </div>
+
+        <!-- หน้าคำถามวิทยาการคำนวณ -->
+        <div id="question-screen" class="overlay hidden prompt-font">
+            <div class="question-box">
+                <h2 style="color:#ff0055; margin-bottom: 15px; font-family: 'Press Start 2P', cursive; font-size: 16px;">ANSWER TO SURVIVE!</h2>
+                <p id="question-text" style="font-size: 18px; margin-bottom: 20px; line-height: 1.5;"></p>
+                <div id="answers-container">
+                    <!-- ปุ่มคำตอบจะถูกสร้างที่นี่ -->
+                </div>
+            </div>
+        </div>
+
+        <!-- หน้าจอจบเกม (ชนะ) -->
+        <div id="game-clear-screen" class="overlay hidden">
+            <h2 style="color:#00ff00; font-size: 40px; margin-bottom: 10px; text-shadow: 2px 2px #000;">YOU ESCAPED!</h2>
+            <p style="margin-bottom: 20px; font-size: 18px;">FINAL SCORE: <span id="clear-score" style="color:#ffcc00;">0</span></p>
+            <p style="margin-bottom: 30px; font-family: 'Prompt', sans-serif; font-size: 14px; text-align: center;">คุณพิชิตเขาวงกตโค้ดทั้ง 3 ด่านสำเร็จแล้ว!</p>
+            <button class="btn" id="playAgainBtn">PLAY AGAIN</button>
+            <button class="btn" id="menuBtnClear" style="font-size: 12px; background-color: #333; color: white;">MENU</button>
+        </div>
+
+        <!-- หน้าจอจบเกม (แพ้) -->
+        <div id="game-over-screen" class="overlay hidden">
+            <h2 style="color:red; font-size: 40px; margin-bottom: 10px;">GAME OVER</h2>
+            <p style="margin-bottom: 20px;">SCORE: <span id="final-score" style="color:#ffcc00;">0</span></p>
+            <button class="btn" id="restartBtn">RESTART</button>
+            <button class="btn" id="menuBtn" style="font-size: 12px; background-color: #333; color: white;">MENU</button>
+        </div>
+
+        <!-- หน้าจอกระดานผู้นำ -->
+        <div id="leaderboard-screen" class="overlay hidden">
+            <h2 style="color:#ffcc00; margin-bottom: 20px;">TOP CODERS</h2>
+            <ul id="leaderboard-list" class="leaderboard-list">
+                <li style="text-align: center; font-family: 'Prompt', sans-serif;">กำลังโหลด...</li>
+            </ul>
+            <button class="btn" id="closeLeaderboardBtn">BACK</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = window.__app_id || 'tomb-of-code-game-v2';
+        let db, auth;
+        let isFirebaseReady = false;
+
         try {
-            let user = auth.currentUser;
-            if (!user) {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                user = auth.currentUser;
+            if (typeof window.__firebase_config !== 'undefined') {
+                const firebaseConfig = JSON.parse(window.__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                signInAnonymously(auth).then(() => {
+                    console.log("Firebase Auth Success");
+                    isFirebaseReady = true;
+                    loadLeaderboard();
+                }).catch(e => console.error("Auth error", e));
             }
-            
-            if (!user) return { success: false, error: "Auth failed" };
-
-            // บันทึกข้อมูลไปยัง Path ที่กำหนด
-            const scoresRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
-            await addDoc(scoresRef, {
-                userId: user.uid,
-                name: studentInfo.name,
-                className: studentInfo.className,
-                rollNo: studentInfo.rollNo,
-                score: score,
-                timestamp: Date.now()
-            });
-            return { success: true };
         } catch (e) {
-            console.error("Error saving score:", e);
-            return { success: false, error: e.message };
+            console.error("Firebase init error", e);
         }
-    };
 
-    // ฟังก์ชันสำหรับดึงคะแนนเพื่อนๆ ทั้งหมด
-    window.fetchScoresFromFirebase = async function() {
-        if (!db || !auth) return { success: false, data: [], error: "Firebase not configured" };
-        
-        try {
-            let user = auth.currentUser;
-            if (!user) {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                user = auth.currentUser;
+        window.saveGameScore = async (name, score) => {
+            if (!isFirebaseReady || !auth.currentUser) return;
+            try {
+                const scoreData = {
+                    name: name || "Anonymous",
+                    score: score,
+                    timestamp: new Date().getTime(),
+                    appId: appId
+                };
+                const scoresRef = collection(db, 'leaderboards'); 
+                await addDoc(scoresRef, scoreData);
+            } catch (e) {
+                console.error("Error saving score", e);
             }
-            
-            if (!user) return { success: false, data: [], error: "Auth failed" };
-
-            const scoresRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
-            const snapshot = await getDocs(scoresRef);
-            let scores = [];
-            snapshot.forEach(doc => {
-                scores.push(doc.data());
-            });
-            
-            // เรียงลำดับคะแนนจากมากไปน้อย (ถ้าคะแนนเท่ากัน ให้เรียงตามเวลาที่เล่นล่าสุด)
-            scores.sort((a, b) => {
-                if (b.score !== a.score) return b.score - a.score;
-                return b.timestamp - a.timestamp;
-            });
-            
-            return { success: true, data: scores.slice(0, 50) }; // แสดงผล 50 อันดับแรก
-        } catch (e) {
-            console.error("Error fetching scores:", e);
-            return { success: false, data: [], error: e.message };
-        }
-    };
-</script>
-
-<script>
-// ==========================================
-// 1. DATA & CONSTANTS
-// ==========================================
-const LEVEL_DATA = [
-    {
-        title: "โจทย์: การตื่นนอน",
-        steps: [
-            { id: 1, text: "ลืมตา", emoji: "👀" },
-            { id: 2, text: "ปิดนาฬิกาปลุก", emoji: "⏰" },
-            { id: 3, text: "ลุกจากเตียง", emoji: "🛏️" },
-            { id: 4, text: "เก็บที่นอน", emoji: "🛌" }
-        ]
-    },
-    {
-        title: "โจทย์: แปรงฟัน",
-        steps: [
-            { id: 1, text: "หยิบแปรง", emoji: "🪥" },
-            { id: 2, text: "บีบยาสีฟัน", emoji: "🧴" },
-            { id: 3, text: "แปรงฟัน", emoji: "😬" },
-            { id: 4, text: "บ้วนปาก", emoji: "🚰" }
-        ]
-    },
-    {
-        title: "โจทย์: ทำความสะอาดบ้าน",
-        steps: [
-            { id: 1, text: "เก็บของให้เป็นระเบียบ", emoji: "📦" },
-            { id: 2, text: "กวาดพื้น", emoji: "🧹" },
-            { id: 3, text: "ถูพื้น", emoji: "🪣" },
-            { id: 4, text: "นำขยะไปทิ้ง", emoji: "🗑️" }
-        ]
-    },
-    {
-        title: "โจทย์: อ่านหนังสือ",
-        steps: [
-            { id: 1, text: "เลือกหนังสือ", emoji: "📚" },
-            { id: 2, text: "เปิดหน้าแรก", emoji: "📖" },
-            { id: 3, text: "อ่านทีละหน้า", emoji: "🤓" },
-            { id: 4, text: "ปิดหนังสือเมื่อจบ", emoji: "📕" }
-        ]
-    },
-    {
-        title: "โจทย์: ซักผ้า",
-        steps: [
-            { id: 1, text: "แยกผ้าสี/ผ้าขาว", emoji: "👕" },
-            { id: 2, text: "ใส่ผ้าในเครื่อง", emoji: "🧺" },
-            { id: 3, text: "ใส่ผงซักฟอก", emoji: "🫧" },
-            { id: 4, text: "ตากผ้า", emoji: "☀️" }
-        ]
-    }
-];
-
-const STATE = {
-    INIT: 0,
-    INSTRUCTIONS: 1,
-    PLAYING: 2,
-    LEVEL_CLEAR: 3,
-    GAME_CLEAR: 4
-};
-
-const PINCH_THRESHOLD = 40; // Pixel distance for pinch
-
-// ==========================================
-// 2. GAME VARIABLES
-// ==========================================
-let canvas = document.getElementById('output_canvas');
-let ctx = canvas.getContext('2d');
-let videoElement = document.getElementById('input_video');
-let htmlUiContainer = document.getElementById('htmlUiContainer');
-let btnStartInit = document.getElementById('btnStartInit');
-
-// Leaderboard UI elements
-let btnShowLeaderboard = document.getElementById('btnShowLeaderboard');
-let leaderboardModal = document.getElementById('leaderboardModal');
-let btnCloseLeaderboard = document.getElementById('btnCloseLeaderboard');
-let leaderboardList = document.getElementById('leaderboardList');
-let gameClearUiContainer = document.getElementById('gameClearUiContainer');
-let btnRestart = document.getElementById('btnRestart');
-let btnShowLeaderboardEnd = document.getElementById('btnShowLeaderboardEnd');
-
-let currentState = STATE.INIT;
-let currentLevelIndex = 0;
-let score = 0;
-
-// Input tracking (unifies Mouse, Touch, and AR Hand)
-let pointer = { x: 0, y: 0, isDown: false, isHovering: false, activeType: 'mouse', isHandVisible: false };
-// AR Specific
-let lastPinchState = false;
-
-// Game Objects
-let cards = [];
-let slots = [];
-let arStartButton = null;
-
-let studentInfo = { name: "", className: "", rollNo: "" };
-let saveStatus = "idle"; // idle, saving, success, error
-
-let draggedCard = null;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
-
-let messageTimer = 0;
-let messageText = "";
-
-// สร้างตัวแปรเก็บข้อมูลวงกลมพื้นหลังเพื่อให้เคลื่อนที่ช้าๆ
-let bgParticles = [];
-
-// ==========================================
-// 3. INITIALIZATION & RESIZE
-// ==========================================
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    if (currentState === STATE.INSTRUCTIONS) setupInstructionUI();
-    if (currentState === STATE.PLAYING) repositionGameObjects();
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
-
-// ==========================================
-// Leaderboard & UI Interaction
-// ==========================================
-async function openLeaderboard() {
-    leaderboardModal.classList.remove('hidden');
-    leaderboardList.innerHTML = '<p class="text-white text-center py-4">กำลังโหลดข้อมูล...</p>';
-    
-    if (window.fetchScoresFromFirebase) {
-        const result = await window.fetchScoresFromFirebase();
-        if (result.success) {
-            if (result.data.length === 0) {
-                leaderboardList.innerHTML = '<p class="text-white/70 text-center py-4">ยังไม่มีข้อมูลคะแนน</p>';
-            } else {
-                leaderboardList.innerHTML = '';
-                result.data.forEach((entry, index) => {
-                    let rankClass = index === 0 ? "text-yellow-400 text-xl font-bold" : (index === 1 ? "text-gray-300 text-lg font-bold" : (index === 2 ? "text-amber-600 text-lg font-bold" : "text-white font-bold"));
-                    const item = document.createElement('div');
-                    item.className = 'bg-white/10 p-3 rounded-xl flex justify-between items-center border border-white/20 mb-2';
-                    item.innerHTML = `
-                        <div class="flex items-center gap-4">
-                            <span class="w-8 text-center ${rankClass}">#${index + 1}</span>
-                            <div>
-                                <div class="text-white font-bold text-lg">${entry.name || 'ไม่ระบุชื่อ'}</div>
-                                <div class="text-white/60 text-xs">${entry.className || '-'} | เลขที่ ${entry.rollNo || '-'}</div>
-                            </div>
-                        </div>
-                        <div class="text-blue-300 font-bold text-2xl drop-shadow">${entry.score}</div>
-                    `;
-                    leaderboardList.appendChild(item);
-                });
-            }
-        } else {
-            leaderboardList.innerHTML = '<p class="text-red-400 text-center py-4">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>';
-        }
-    } else {
-         leaderboardList.innerHTML = '<p class="text-red-400 text-center py-4">ไม่สามารถเชื่อมต่อฐานข้อมูลได้</p>';
-    }
-}
-
-btnShowLeaderboard.addEventListener('click', openLeaderboard);
-btnShowLeaderboardEnd.addEventListener('click', openLeaderboard);
-btnCloseLeaderboard.addEventListener('click', () => { leaderboardModal.classList.add('hidden'); });
-
-btnRestart.addEventListener('click', () => {
-    gameClearUiContainer.classList.add('hidden');
-    score = 0;
-    currentLevelIndex = 0;
-    currentState = STATE.INSTRUCTIONS;
-    setupInstructionUI();
-});
-
-btnStartInit.addEventListener('click', async () => {
-    // Validate inputs
-    const inpName = document.getElementById('inpName').value.trim();
-    const inpClass = document.getElementById('inpClass').value.trim();
-    const inpRoll = document.getElementById('inpRoll').value.trim();
-    const formError = document.getElementById('formError');
-
-    if (!inpName || !inpClass || !inpRoll) {
-        formError.classList.remove('hidden');
-        return;
-    }
-    formError.classList.add('hidden');
-
-    // เก็บข้อมูลผู้เล่น
-    studentInfo.name = inpName;
-    studentInfo.className = inpClass;
-    studentInfo.rollNo = inpRoll;
-
-    document.getElementById('loadingText').style.display = 'block';
-    btnStartInit.disabled = true;
-    
-    // Start Camera & MediaPipe
-    await initMediaPipe();
-    
-    // Transition to AR Instruction Screen
-    htmlUiContainer.style.display = 'none';
-    currentState = STATE.INSTRUCTIONS;
-    setupInstructionUI();
-    
-    // Start Game Loop
-    requestAnimationFrame(gameLoop);
-});
-
-// ==========================================
-// 4. MEDIAPIPE HANDS SETUP
-// ==========================================
-let hands, camera;
-let cameraStarted = false;
-
-async function initMediaPipe() {
-    // เก็บสถานะของ console.error เดิมไว้
-    let originalConsoleError = console.error;
-    
-    try {
-        // 1. ตรวจสอบว่าระบบเบราว์เซอร์นี้รองรับการเรียกใช้กล้องหรือไม่
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error("Camera API is not supported in this environment.");
-        }
-
-        // 2. ตรวจสอบล่วงหน้าว่ามีอุปกรณ์กล้อง (Video Input) อยู่บนเครื่องจริงๆ หรือไม่
-        if (navigator.mediaDevices.enumerateDevices) {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const hasVideoInput = devices.some(device => device.kind === 'videoinput');
-            if (!hasVideoInput) {
-                throw new Error("No webcam found on this device.");
-            }
-        }
-
-        hands = new Hands({locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-        }});
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.7
-        });
-        hands.onResults(onResults);
-
-        camera = new Camera(videoElement, {
-            onFrame: async () => { await hands.send({image: videoElement}); },
-            width: 1280, height: 720
-        });
-        
-        // 3. ดักจับ Error ภายในไลบรารีของ MediaPipe ไม่ให้แสดงสีแดงในหน้าต่าง Console
-        console.error = function(...args) {
-            if (args[0] && typeof args[0] === 'string' && args[0].includes('Failed to acquire camera feed')) return;
-            originalConsoleError.apply(console, args);
         };
 
-        await camera.start();
+        function loadLeaderboard() {
+            if (!isFirebaseReady || !auth.currentUser) return;
+            const listEl = document.getElementById('leaderboard-list');
+            try {
+                const scoresRef = collection(db, 'leaderboards');
+                const q = query(scoresRef, limit(100));
+
+                onSnapshot(q, (snapshot) => {
+                    let scores = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data && data.appId === appId && typeof data.score === 'number') {
+                            scores.push(data);
+                        }
+                    });
+                    
+                    scores.sort((a, b) => b.score - a.score);
+                    scores = scores.slice(0, 10);
+                    
+                    listEl.innerHTML = '';
+                    if (scores.length === 0) {
+                        listEl.innerHTML = '<li style="text-align: center; font-family: \'Prompt\', sans-serif;">ยังไม่มีข้อมูล</li>';
+                        return;
+                    }
+                    
+                    scores.forEach((s, index) => {
+                        const li = document.createElement('li');
+                        li.className = 'leaderboard-item';
+                        li.innerHTML = `<span>#${index+1} ${s.name}</span> <span style="color:#ffcc00;">${s.score}</span>`;
+                        listEl.appendChild(li);
+                    });
+                }, (error) => {
+                    console.error("Error loading leaderboard:", error);
+                });
+            } catch(e) {
+                 console.error("Query setup error", e);
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
         
-        // คืนค่า console.error กลับสู่ปกติเมื่อกล้องโหลดสำเร็จ
-        console.error = originalConsoleError;
-        cameraStarted = true;
-    } catch (error) {
-        // แจ้งเตือนเงียบๆ เป็น Warning แทน
-        console.warn("สลับไปใช้โหมดเมาส์/สัมผัส เนื่องจากไม่สามารถเข้าถึงกล้องได้:", error.message);
-        cameraStarted = false;
+        let gameState = 'menu'; 
+        let score = 0;
+        let level = 1;
+        const MAX_LEVEL = 3; 
+        let playerName = "Player";
+        let isMultiplierActive = false;
+        let multiplierTimer = 0;
+        const MULTIPLIER_DURATION = 4000; 
+        let lastTime = 0;
+        let mapData = [];
         
-        // คืนค่า console.error ให้ระบบ
-        console.error = originalConsoleError; 
-    }
-}
-
-function onResults(results) {
-    pointer.isHandVisible = false;
-
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        pointer.isHandVisible = true;
-        pointer.activeType = 'hand';
-
-        const landmarks = results.multiHandLandmarks[0];
+        let selectedCharKey = 'mask'; 
         
-        // Map normalized coordinates (0-1) to Canvas coordinates
-        // Assuming video covers canvas (calculated in draw loop), we simplify mapping here
-        // For perfect mapping, we should use the same aspect ratio math, but simple mapping is often enough
-        // Let's use exact mapping based on video cover logic.
-        const hRatio = canvas.width / videoElement.videoWidth;
-        const vRatio = canvas.height / videoElement.videoHeight;
-        const ratio = Math.max(hRatio, vRatio);
-        const centerShift_x = (canvas.width - videoElement.videoWidth * ratio) / 2;
-        const centerShift_y = (canvas.height - videoElement.videoHeight * ratio) / 2;
-
-        const mapToCanvas = (lm) => {
-            // MediaPipe mirrors x by default on some setups, but usually camera_utils handles it.
-            // If pointer moves opposite, use: (1 - lm.x)
-            let vx = (1 - lm.x) * videoElement.videoWidth; 
-            let vy = lm.y * videoElement.videoHeight;
-            return {
-                x: vx * ratio + centerShift_x,
-                y: vy * ratio + centerShift_y
-            };
+        const PIXEL_CHARS = {
+            'mask': { 
+                color: '#ffcc00', 
+                grid: [
+                    [0,1,1,1,1,1,1,0],
+                    [1,1,1,1,1,1,1,1],
+                    [1,2,2,1,1,2,2,1],
+                    [1,2,2,1,1,2,2,1],
+                    [1,1,1,1,1,1,1,1],
+                    [0,1,2,2,2,2,1,0],
+                    [0,1,1,1,1,1,1,0],
+                    [0,1,1,0,0,1,1,0]
+                ]
+            },
+            'dog': {
+                color: '#ff9900', 
+                grid: [
+                    [1,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1],
+                    [1,1,1,1,1,1,1,1],
+                    [1,2,1,1,1,1,2,1],
+                    [1,1,1,2,2,1,1,1],
+                    [1,1,1,1,1,1,1,1],
+                    [0,1,1,1,1,1,1,0],
+                    [0,1,0,0,0,0,1,0]
+                ]
+            },
+            'ghost': {
+                color: '#ffffff', 
+                grid: [
+                    [0,1,1,1,1,1,1,0],
+                    [1,1,1,1,1,1,1,1],
+                    [1,2,2,1,1,2,2,1],
+                    [1,2,2,1,1,2,2,1],
+                    [1,1,1,2,2,1,1,1],
+                    [1,1,1,2,2,1,1,1],
+                    [1,1,1,1,1,1,1,1],
+                    [1,0,1,0,0,1,0,1]
+                ]
+            },
+            'slime': {
+                color: '#00ffcc', 
+                grid: [
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,1,1,1,1,0,0],
+                    [0,1,1,1,1,1,1,0],
+                    [1,1,2,1,1,2,1,1],
+                    [1,1,1,1,1,1,1,1],
+                    [1,1,1,1,1,1,1,1],
+                    [1,1,1,1,1,1,1,1],
+                    [0,1,1,1,1,1,1,0]
+                ]
+            }
         };
 
-        const indexTip = mapToCanvas(landmarks[8]);
-        const thumbTip = mapToCanvas(landmarks[4]);
-
-        // Update pointer position to index tip
-        pointer.x = indexTip.x;
-        pointer.y = indexTip.y;
-
-        // Calculate distance for pinch
-        const dx = indexTip.x - thumbTip.x;
-        const dy = indexTip.y - thumbTip.y;
-        const distance = Math.sqrt(dx * dx + dy * dy); // พีทาโกรัส
-
-        const currentPinchState = distance < PINCH_THRESHOLD;
-
-        // Simulate MouseDown/Up based on Pinch
-        if (currentPinchState && !lastPinchState) {
-            handlePointerDown();
-        } else if (!currentPinchState && lastPinchState) {
-            handlePointerUp();
-        }
-        
-        pointer.isDown = currentPinchState;
-        lastPinchState = currentPinchState;
-    }
-}
-
-// ==========================================
-// 5. INPUT HANDLING (Mouse/Touch Fallback)
-// ==========================================
-function setPointerPos(e) {
-    if (pointer.activeType === 'hand') return; // Ignore mouse if hand is active
-    
-    let clientX, clientY;
-    if (e.touches && e.touches.length > 0) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-        pointer.activeType = 'touch';
-    } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-        pointer.activeType = 'mouse';
-    }
-    
-    const rect = canvas.getBoundingClientRect();
-    pointer.x = clientX - rect.left;
-    pointer.y = clientY - rect.top;
-}
-
-canvas.addEventListener('mousedown', (e) => { setPointerPos(e); pointer.isDown = true; handlePointerDown(); });
-canvas.addEventListener('mousemove', (e) => { if(pointer.isDown || pointer.activeType === 'mouse') setPointerPos(e); });
-canvas.addEventListener('mouseup', () => { pointer.isDown = false; handlePointerUp(); });
-canvas.addEventListener('touchstart', (e) => { e.preventDefault(); setPointerPos(e); pointer.isDown = true; handlePointerDown(); }, {passive: false});
-canvas.addEventListener('touchmove', (e) => { e.preventDefault(); setPointerPos(e); }, {passive: false});
-canvas.addEventListener('touchend', (e) => { e.preventDefault(); pointer.isDown = false; handlePointerUp(); });
-
-function handlePointerDown() {
-    if (currentState === STATE.INSTRUCTIONS) {
-        if (arStartButton && isPointInRect(pointer, arStartButton)) {
-            startGame();
-        }
-    } else if (currentState === STATE.PLAYING) {
-        // Find topmost card
-        for (let i = cards.length - 1; i >= 0; i--) {
-            let card = cards[i];
-            if (isPointInRect(pointer, card)) {
-                draggedCard = card;
-                dragOffsetX = pointer.x - card.x;
-                dragOffsetY = pointer.y - card.y;
+        function initCharSelectUI() {
+            const container = document.getElementById('char-select');
+            container.innerHTML = ''; 
+            
+            Object.keys(PIXEL_CHARS).forEach(key => {
+                let pCanvas = document.createElement('canvas');
+                pCanvas.width = 40;
+                pCanvas.height = 40;
+                pCanvas.className = 'char-btn';
+                pCanvas.style.cursor = 'pointer';
+                pCanvas.style.border = key === selectedCharKey ? '3px solid white' : '3px solid transparent';
+                pCanvas.style.backgroundColor = '#222';
+                pCanvas.dataset.key = key;
                 
-                // Remove from current slot if it was in one
-                if (card.currentSlot) {
-                    card.currentSlot.occupiedBy = null;
-                    card.currentSlot = null;
+                let cCtx = pCanvas.getContext('2d');
+                let pSize = 40 / 8;
+                let grid = PIXEL_CHARS[key].grid;
+                
+                for(let r=0; r<8; r++) {
+                    for(let c=0; c<8; c++) {
+                        if(grid[r][c] === 1) {
+                            cCtx.fillStyle = PIXEL_CHARS[key].color;
+                            cCtx.fillRect(c*pSize, r*pSize, pSize, pSize);
+                        } else if (grid[r][c] === 2) {
+                            cCtx.fillStyle = '#000';
+                            cCtx.fillRect(c*pSize, r*pSize, pSize, pSize);
+                        }
+                    }
                 }
                 
-                // Bring to front
-                cards.splice(i, 1);
-                cards.push(draggedCard);
-                break;
-            }
-        }
-    } else if (currentState === STATE.LEVEL_CLEAR) {
-         nextLevel();
-    }
-}
-
-function handlePointerUp() {
-    if (draggedCard) {
-        // Check drop on slots
-        let droppedInSlot = false;
-        for (let slot of slots) {
-            // Simple center-to-center distance check for snapping
-            let cardCenterX = draggedCard.x + draggedCard.width / 2;
-            let cardCenterY = draggedCard.y + draggedCard.height / 2;
-            let slotCenterX = slot.x + slot.width / 2;
-            let slotCenterY = slot.y + slot.height / 2;
-            
-            let dist = Math.sqrt(Math.pow(cardCenterX - slotCenterX, 2) + Math.pow(cardCenterY - slotCenterY, 2));
-            
-            if (dist < slot.width / 1.5) {
-                if (!slot.occupiedBy) {
-                    // Snap to slot
-                    draggedCard.x = slot.x + (slot.width - draggedCard.width) / 2;
-                    draggedCard.y = slot.y + (slot.height - draggedCard.height) / 2;
-                    draggedCard.currentSlot = slot;
-                    slot.occupiedBy = draggedCard;
-                    droppedInSlot = true;
-                }
-                break;
-            }
-        }
-        
-        // Return to original pos if not dropped in a valid slot
-        if (!droppedInSlot) {
-            draggedCard.x = draggedCard.originX;
-            draggedCard.y = draggedCard.originY;
-        }
-        
-        draggedCard = null;
-        checkWinCondition();
-    }
-}
-
-function isPointInRect(pt, rect) {
-    return pt.x >= rect.x && pt.x <= rect.x + rect.width &&
-           pt.y >= rect.y && pt.y <= rect.y + rect.height;
-}
-
-// ==========================================
-// 6. GAME LOGIC & SETUP
-// ==========================================
-function setupInstructionUI() {
-    arStartButton = {
-        x: canvas.width / 2 - 150,
-        y: canvas.height / 2 - 50,
-        width: 300,
-        height: 100,
-        text: "เริ่มเกม!",
-        color: "rgba(34, 197, 94, 0.8)", // Green
-        hoverColor: "rgba(34, 197, 94, 1)"
-    };
-}
-
-function startGame() {
-    score = 0;
-    currentLevelIndex = 0;
-    loadLevel(currentLevelIndex);
-    currentState = STATE.PLAYING;
-}
-
-function loadLevel(index) {
-    const levelData = LEVEL_DATA[index];
-    let stepCount = levelData.steps.length;
-    
-    // Prepare Cards
-    cards = [];
-    let shuffledSteps = [...levelData.steps].sort(() => Math.random() - 0.5);
-    
-    const cardWidth = Math.min(180, canvas.width / stepCount - 20);
-    const cardHeight = cardWidth * 1.2;
-    const startY = canvas.height * 0.2;
-    
-    const totalCardsWidth = (cardWidth * stepCount) + (20 * (stepCount - 1));
-    let startX = (canvas.width - totalCardsWidth) / 2;
-
-    shuffledSteps.forEach((step, i) => {
-        cards.push({
-            id: step.id,
-            text: step.text,
-            emoji: step.emoji,
-            width: cardWidth,
-            height: cardHeight,
-            x: startX + i * (cardWidth + 20),
-            y: startY,
-            originX: startX + i * (cardWidth + 20),
-            originY: startY,
-            currentSlot: null
-        });
-    });
-
-    // Prepare Slots
-    slots = [];
-    const slotY = canvas.height * 0.7;
-    startX = (canvas.width - totalCardsWidth) / 2;
-    
-    for (let i = 0; i < stepCount; i++) {
-        slots.push({
-            expectedId: levelData.steps[i].id,
-            x: startX + i * (cardWidth + 20),
-            y: slotY,
-            width: cardWidth,
-            height: cardHeight,
-            occupiedBy: null
-        });
-    }
-}
-
-function repositionGameObjects() {
-    // Basic repositioning on resize if needed (reloading level is easier for this scale)
-    if (currentState === STATE.PLAYING) {
-        // Store current occupations
-        let occupations = slots.map(s => s.occupiedBy);
-        loadLevel(currentLevelIndex);
-        // Restore occupations (simplified, might snap back to origins if resize is drastic)
-        occupations.forEach((card, i) => {
-             if(card) {
-                 let newCard = cards.find(c => c.id === card.id);
-                 if(newCard) {
-                     newCard.x = slots[i].x + (slots[i].width - newCard.width) / 2;
-                     newCard.y = slots[i].y + (slots[i].height - newCard.height) / 2;
-                     newCard.currentSlot = slots[i];
-                     slots[i].occupiedBy = newCard;
-                 }
-             }
-        });
-    }
-}
-
-function checkWinCondition() {
-    let allFilled = true;
-    let allCorrect = true;
-    
-    for (let slot of slots) {
-        if (!slot.occupiedBy) {
-            allFilled = false;
-            break;
-        }
-        if (slot.occupiedBy.id !== slot.expectedId) {
-            allCorrect = false;
-        }
-    }
-
-    if (allFilled) {
-        if (allCorrect) {
-            score += 100;
-            showMessage("ถูกต้อง! ยอดเยี่ยมมาก", "rgba(34, 197, 94, 0.9)");
-            setTimeout(() => {
-                currentState = STATE.LEVEL_CLEAR;
-            }, 1500);
-        } else {
-            showMessage("ยังไม่ถูก ลองเรียงใหม่นะ", "rgba(239, 68, 68, 0.9)");
-            // Return wrong cards
-            slots.forEach(slot => {
-                 if(slot.occupiedBy && slot.occupiedBy.id !== slot.expectedId) {
-                     slot.occupiedBy.x = slot.occupiedBy.originX;
-                     slot.occupiedBy.y = slot.occupiedBy.originY;
-                     slot.occupiedBy.currentSlot = null;
-                     slot.occupiedBy = null;
-                 }
+                pCanvas.addEventListener('click', () => {
+                    document.querySelectorAll('.char-btn').forEach(b => b.style.border = '3px solid transparent');
+                    pCanvas.style.border = '3px solid white';
+                    selectedCharKey = key;
+                });
+                
+                container.appendChild(pCanvas);
             });
         }
-    }
-}
 
-function nextLevel() {
-    currentLevelIndex++;
-    if (currentLevelIndex < LEVEL_DATA.length) {
-        loadLevel(currentLevelIndex);
-        currentState = STATE.PLAYING;
-    } else {
-        currentState = STATE.GAME_CLEAR;
-        saveGameScore();
-        showGameClearUI();
-    }
-}
+        const questions = [
+            {
+                q: "ข้อใดคือความหมายของ 'อัลกอริทึม (Algorithm)'?",
+                options: ["ลำดับขั้นตอนการแก้ปัญหา", "ไวรัสคอมพิวเตอร์ชนิดหนึ่ง", "อุปกรณ์ฮาร์ดแวร์", "โปรแกรมดูหนัง"],
+                ans: 0
+            },
+            {
+                q: "ลักษณะของอัลกอริทึมที่ดีคือข้อใด?",
+                options: ["มีความซับซ้อนมากจนคนทั่วไปอ่านไม่ออก", "มีขั้นตอนชัดเจนและสามารถทำงานจนจบได้", "ต้องเขียนเป็นภาษาอังกฤษเท่านั้น", "ทำงานวนลูปไปเรื่อยๆ ไม่มีวันจบ"],
+                ans: 1
+            },
+            {
+                q: "ถ้าเปรียบเทียบอัลกอริทึมในชีวิตประจำวัน สิ่งใดใกล้เคียงที่สุด?",
+                options: ["สูตรการทำอาหารตามขั้นตอน", "การวาดภาพศิลปะตามอารมณ์", "การเปิดฟังเพลงแบบสุ่ม", "การนอนหลับ"],
+                ans: 0
+            },
+            {
+                q: "ในการเขียน Flowchart สี่เหลี่ยมข้าวหลามตัด (Diamond) หมายถึงอะไร?",
+                options: ["จุดเริ่มต้น", "การแสดงผล", "การตัดสินใจ (เงื่อนไข)", "จุดสิ้นสุด"],
+                ans: 2
+            },
+            {
+                q: "ข้อใดคือประโยชน์หลักของการคิดแบบอัลกอริทึม?",
+                options: ["ทำให้คอมพิวเตอร์สวยขึ้น", "แก้ปัญหาอย่างเป็นระบบและลดข้อผิดพลาด", "ทำให้พิมพ์ดีดเร็วขึ้น", "ป้องกันไวรัสได้ 100%"],
+                ans: 1
+            }
+        ];
+        
+        let currentQuestion = null;
 
-function showGameClearUI() {
-    gameClearUiContainer.classList.remove('hidden');
-    document.getElementById('finalScoreText').innerText = `ผู้เล่น: ${studentInfo.name} | คะแนนรวม: ${score}`;
-    updateSaveStatusUI();
-}
+        const TILE_SIZE = 40;
+        let COLS = 15; 
+        let ROWS = 25;
 
-function updateSaveStatusUI() {
-    const el = document.getElementById('saveStatusText');
-    if (saveStatus === "saving") {
-        el.innerText = "กำลังบันทึกคะแนนลงฐานข้อมูล...";
-        el.className = "text-blue-300 text-sm mb-8 animate-pulse";
-    } else if (saveStatus === "success") {
-        el.innerText = "บันทึกคะแนนสำเร็จ!";
-        el.className = "text-green-400 text-sm mb-8 font-bold";
-    } else if (saveStatus === "error") {
-        el.innerText = "ไม่สามารถบันทึกคะแนนได้ (อาจไม่มีการเชื่อมต่อฐานข้อมูล)";
-        el.className = "text-red-400 text-sm mb-8";
-    }
-}
+        const COLORS = {
+            bg: '#000000',
+            wallEdge: '#ff0055', 
+            wallFill: '#330011',
+            dot: '#ffffaa',
+            portal: '#00ff00' 
+        };
 
-async function saveGameScore() {
-    saveStatus = "saving";
-    updateSaveStatusUI();
-    if (window.saveScoreToFirebase) {
-        const result = await window.saveScoreToFirebase(score, studentInfo);
-        saveStatus = result.success ? "success" : "error";
-    } else {
-        saveStatus = "error";
-    }
-    updateSaveStatusUI();
-}
+        const player = {
+            x: 0, y: 0,
+            px: 0, py: 0, 
+            vx: 0, vy: 0,
+            isMoving: false,
+            size: TILE_SIZE * 0.7
+        };
 
-function showMessage(text, color) {
-    messageText = text;
-    messageTimer = 180; // approx 3 seconds at 60fps
-}
+        let dots = []; 
+        let stars = []; 
+        let enemies = []; 
+        let exitPortal = {x: 0, y: 0}; 
+        
+        let touchStartX = 0;
+        let touchStartY = 0;
 
-// ==========================================
-// 7. MAIN UPDATE & DRAW LOOP
-// ==========================================
-function update() {
-    pointer.isHovering = false;
+        const uiScore = document.getElementById('score');
+        const uiLevel = document.getElementById('level');
+        const uiMultiplier = document.getElementById('multiplier-display');
+        const uiTimer = document.getElementById('timer');
 
-    if (currentState === STATE.INSTRUCTIONS) {
-        if (arStartButton && isPointInRect(pointer, arStartButton)) {
-            pointer.isHovering = true;
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
-    } else if (currentState === STATE.PLAYING) {
-        if (draggedCard) {
-            draggedCard.x = pointer.x - dragOffsetX;
-            draggedCard.y = pointer.y - dragOffsetY;
-        } else {
-            // Check hover for cursor state
-            for (let card of cards) {
-                if (isPointInRect(pointer, card)) {
-                    pointer.isHovering = true;
-                    break;
+        window.addEventListener('resize', resize);
+
+        function generateMap() {
+            mapData = [];
+            dots = [];
+            stars = [];
+            enemies = [];
+            
+            // 1. เติมกำแพงให้เต็ม
+            for (let y = 0; y < ROWS; y++) {
+                let row = [];
+                for (let x = 0; x < COLS; x++) {
+                    row.push(1);
+                }
+                mapData.push(row);
+            }
+            
+            // 2. สร้างเขาวงกตหลัก (DFS)
+            let stack = [];
+            let start = {x: 1, y: 1};
+            mapData[start.y][start.x] = 0;
+            stack.push(start);
+            
+            let furthestCell = start;
+            let maxDist = 0;
+
+            const dirs = [
+                {dx: 0, dy: -2}, {dx: 0, dy: 2}, 
+                {dx: -2, dy: 0}, {dx: 2, dy: 0}
+            ];
+
+            while(stack.length > 0) {
+                let current = stack[stack.length - 1];
+                let neighbors = [];
+                
+                for(let dir of dirs) {
+                    let nx = current.x + dir.dx;
+                    let ny = current.y + dir.dy;
+                    if(nx > 0 && nx < COLS - 1 && ny > 0 && ny < ROWS - 1 && mapData[ny][nx] === 1) {
+                        neighbors.push({x: nx, y: ny, dx: dir.dx, dy: dir.dy});
+                    }
+                }
+                
+                if(neighbors.length > 0) {
+                    let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    mapData[current.y + next.dy / 2][current.x + next.dx / 2] = 0;
+                    mapData[next.y][next.x] = 0;
+                    stack.push({x: next.x, y: next.y});
+                    
+                    if(stack.length > maxDist) {
+                        maxDist = stack.length;
+                        furthestCell = {x: next.x, y: next.y};
+                    }
+                } else {
+                    stack.pop();
+                }
+            }
+
+            exitPortal = {x: furthestCell.x, y: furthestCell.y};
+
+            // 3. กำจัดทางตัน (Dead End Removal) ป้องกันการพุ่งแล้วติดแหง็ก 100%
+            let removedDeadEnd = true;
+            while(removedDeadEnd) {
+                removedDeadEnd = false;
+                for (let y = 1; y < ROWS - 1; y++) {
+                    for (let x = 1; x < COLS - 1; x++) {
+                        if (mapData[y][x] === 0) {
+                            // ห้ามถมจุดเริ่มต้นและทางออก
+                            if ((x === 1 && y === 1) || (x === exitPortal.x && y === exitPortal.y)) continue;
+                            
+                            let wallsCount = 0;
+                            if (mapData[y-1][x] === 1) wallsCount++;
+                            if (mapData[y+1][x] === 1) wallsCount++;
+                            if (mapData[y][x-1] === 1) wallsCount++;
+                            if (mapData[y][x+1] === 1) wallsCount++;
+                            
+                            // ถ้าถูกล้อม 3 ด้าน (เป็นตัว U) ให้ถมเป็นกำแพง
+                            if (wallsCount >= 3) {
+                                mapData[y][x] = 1;
+                                removedDeadEnd = true; // ทำซ้ำจนกว่าจะไม่เหลือตัว U
+                            }
+                        }
+                    }
+                }
+            }
+
+            let enemyCount = 0;
+            let maxEnemies = Math.min(2 + level, 5); // จำกัดจำนวน
+            
+            for (let y = 1; y < ROWS - 1; y++) {
+                for (let x = 1; x < COLS - 1; x++) {
+                    if (mapData[y][x] === 0) {
+                        if (x === 1 && y === 1) continue; 
+                        if (x === exitPortal.x && y === exitPortal.y) continue; 
+                        
+                        let r = Math.random();
+                        
+                        // วางค้างคาวอย่างปลอดภัย (เฉพาะที่มีพื้นที่ให้ขยับ)
+                        if (r < 0.05 + (level * 0.01) && enemyCount < maxEnemies) {
+                            let spaceHoriz = mapData[y][x-1] === 0 && mapData[y][x+1] === 0;
+                            let spaceVert = mapData[y-1][x] === 0 && mapData[y+1][x] === 0;
+                            
+                            // ห้ามวางตรงมุมเลี้ยว
+                            if (spaceHoriz || spaceVert) {
+                                let isHoriz = spaceHoriz;
+                                if (spaceHoriz && spaceVert) isHoriz = Math.random() > 0.5;
+                                
+                                enemies.push({
+                                    x: x, y: y, 
+                                    px: x * TILE_SIZE, py: y * TILE_SIZE,
+                                    vx: isHoriz ? 1 : 0, vy: isHoriz ? 0 : 1,
+                                    size: TILE_SIZE * 0.6
+                                });
+                                enemyCount++;
+                            }
+                        }
+                        // วางดาวคำถาม
+                        else if (r < 0.05) {
+                            stars.push({x: x, y: y, collected: false});
+                        } 
+                        // วางเหรียญคะแนน
+                        else if (r < 0.4) {
+                            dots.push({x: x, y: y, collected: false});
+                        }
+                    }
+                }
+            }
+            
+            // รีเซ็ตผู้เล่น
+            player.x = 1;
+            player.y = 1;
+            player.px = player.x * TILE_SIZE;
+            player.py = player.y * TILE_SIZE;
+            player.vx = 0;
+            player.vy = 0;
+            player.isMoving = false;
+        }
+
+        function isWall(x, y) {
+            if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return true;
+            return mapData[y][x] === 1;
+        }
+
+        function movePlayer(dx, dy) {
+            if (player.isMoving || gameState !== 'playing') return;
+            if (!isWall(player.x + dx, player.y + dy)) {
+                player.vx = dx;
+                player.vy = dy;
+                player.isMoving = true;
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'w') movePlayer(0, -1);
+            if (e.key === 'ArrowDown' || e.key === 's') movePlayer(0, 1);
+            if (e.key === 'ArrowLeft' || e.key === 'a') movePlayer(-1, 0);
+            if (e.key === 'ArrowRight' || e.key === 'd') movePlayer(1, 0);
+        });
+
+        canvas.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, {passive: false});
+
+        canvas.addEventListener('touchmove', e => { e.preventDefault(); }, {passive: false});
+
+        canvas.addEventListener('touchend', e => {
+            if (gameState !== 'playing') return;
+            let dx = e.changedTouches[0].screenX - touchStartX;
+            let dy = e.changedTouches[0].screenY - touchStartY;
+            
+            if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
+                if (Math.abs(dx) > Math.abs(dy)) movePlayer(dx > 0 ? 1 : -1, 0);
+                else movePlayer(0, dy > 0 ? 1 : -1);
+            }
+        });
+
+        function update(dt) {
+            if (gameState !== 'playing') return;
+
+            // บัฟอมตะ
+            if (isMultiplierActive) {
+                multiplierTimer -= dt;
+                uiTimer.innerText = (multiplierTimer / 1000).toFixed(1);
+                if (multiplierTimer <= 0) {
+                    isMultiplierActive = false;
+                    uiMultiplier.classList.add('hidden');
+                }
+            }
+
+            // การพุ่งของผู้เล่น
+            if (player.isMoving) {
+                const speed = 700 * (dt / 1000); 
+                let targetPx = player.x * TILE_SIZE;
+                let targetPy = player.y * TILE_SIZE;
+                
+                if (Math.abs(player.px - targetPx) < speed && Math.abs(player.py - targetPy) < speed) {
+                    player.px = targetPx;
+                    player.py = targetPy;
+                    player.x += player.vx;
+                    player.y += player.vy;
+                    
+                    if (isWall(player.x, player.y)) {
+                        player.x -= player.vx;
+                        player.y -= player.vy;
+                        player.vx = 0;
+                        player.vy = 0;
+                        player.isMoving = false;
+                    }
+                } else {
+                    player.px += player.vx * speed;
+                    player.py += player.vy * speed;
+                }
+                checkCollisions();
+            }
+
+            // ค้างคาว
+            const enemySpeed = 150 * (dt / 1000); 
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let en = enemies[i];
+                let targetPx = en.x * TILE_SIZE;
+                let targetPy = en.y * TILE_SIZE;
+                
+                if (Math.abs(en.px - targetPx) < enemySpeed && Math.abs(en.py - targetPy) < enemySpeed) {
+                    en.px = targetPx;
+                    en.py = targetPy;
+                    if (isWall(en.x + en.vx, en.y + en.vy)) {
+                        en.vx *= -1;
+                        en.vy *= -1;
+                    } else {
+                        en.x += en.vx;
+                        en.y += en.vy;
+                    }
+                } else {
+                    en.px += en.vx * enemySpeed;
+                    en.py += en.vy * enemySpeed;
+                }
+
+                const hitDist = TILE_SIZE * 0.7;
+                if (Math.abs(en.px - player.px) < hitDist && Math.abs(en.py - player.py) < hitDist) {
+                    if (isMultiplierActive) {
+                        enemies.splice(i, 1);
+                        score += 50; 
+                        uiScore.innerText = score;
+                    } else {
+                        gameOver();
+                    }
+                }
+            }
+
+            // ผ่านด่าน หรือ จบเกม
+            if (!player.isMoving && player.x === exitPortal.x && player.y === exitPortal.y) {
+                score += 100; 
+                if (level >= MAX_LEVEL) {
+                    gameClear(); // ชนะเกมถ้าครบ 3 ด่าน
+                } else {
+                    level++;
+                    uiScore.innerText = score;
+                    uiLevel.innerText = level;
+                    isMultiplierActive = true;
+                    multiplierTimer = MULTIPLIER_DURATION;
+                    uiMultiplier.classList.remove('hidden');
+                    generateMap();
                 }
             }
         }
-    } else if (currentState === STATE.LEVEL_CLEAR || currentState === STATE.GAME_CLEAR) {
-        pointer.isHovering = true; // Make clicking anywhere proceed
-    }
 
-    if (messageTimer > 0) messageTimer--;
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 1. Draw Video Background (Cover mode)
-    if (cameraStarted && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-        const hRatio = canvas.width / videoElement.videoWidth;
-        const vRatio = canvas.height / videoElement.videoHeight;
-        const ratio = Math.max(hRatio, vRatio);
-        const centerShift_x = (canvas.width - videoElement.videoWidth * ratio) / 2;
-        const centerShift_y = (canvas.height - videoElement.videoHeight * ratio) / 2;
-
-        ctx.save();
-        // Flip video horizontally for mirror effect (intuitive for AR)
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-        
-        ctx.drawImage(videoElement, 0, 0, videoElement.videoWidth, videoElement.videoHeight,
-                      centerShift_x, centerShift_y, videoElement.videoWidth * ratio, videoElement.videoHeight * ratio);
-        
-        // Darken video slightly for UI contrast
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.restore();
-    } else if (!cameraStarted) {
-        // Fallback background if camera is not available
-        ctx.fillStyle = '#1e1b4b'; // Dark indigo background
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // สร้างวงกลมครั้งแรกหากยังไม่มี
-        if (bgParticles.length === 0 && canvas.width > 0) {
-            for (let i = 0; i < 12; i++) {
-                bgParticles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    radius: Math.random() * 150 + 50,
-                    vx: (Math.random() - 0.5) * 0.4, // ความเร็วแนวนอนช้าๆ
-                    vy: (Math.random() - 0.5) * 0.4  // ความเร็วแนวตั้งช้าๆ
-                });
+        function checkCollisions() {
+            for (let i = 0; i < dots.length; i++) {
+                let d = dots[i];
+                if (!d.collected && player.x === d.x && player.y === d.y) {
+                    d.collected = true;
+                    let pts = isMultiplierActive ? 20 : 10;
+                    score += pts;
+                    uiScore.innerText = score;
+                }
+            }
+            for (let i = 0; i < stars.length; i++) {
+                let s = stars[i];
+                if (!s.collected && player.x === s.x && player.y === s.y) {
+                    s.collected = true;
+                    showQuestion();
+                }
             }
         }
 
-        // วาดและอัปเดตตำแหน่งวงกลมให้ลอยช้าๆ
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-        bgParticles.forEach(p => {
-            p.x += p.vx;
-            p.y += p.vy;
+        function showQuestion() {
+            gameState = 'question';
+            currentQuestion = questions[Math.floor(Math.random() * questions.length)];
+            document.getElementById('question-text').innerText = currentQuestion.q;
+            const ansContainer = document.getElementById('answers-container');
+            ansContainer.innerHTML = '';
+            
+            currentQuestion.options.forEach((opt, index) => {
+                let btn = document.createElement('button');
+                btn.className = 'ans-btn';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(index);
+                ansContainer.appendChild(btn);
+            });
+            document.getElementById('question-screen').classList.remove('hidden');
+        }
 
-            // ให้วงกลมวนกลับมาเมื่อลอยออกนอกจอ
-            if (p.x - p.radius > canvas.width) p.x = -p.radius;
-            if (p.x + p.radius < 0) p.x = canvas.width + p.radius;
-            if (p.y - p.radius > canvas.height) p.y = -p.radius;
-            if (p.y + p.radius < 0) p.y = canvas.height + p.radius;
+        function handleAnswer(selectedIndex) {
+            document.getElementById('question-screen').classList.add('hidden');
+            if (selectedIndex === currentQuestion.ans) {
+                isMultiplierActive = true;
+                multiplierTimer = MULTIPLIER_DURATION;
+                uiMultiplier.classList.remove('hidden');
+            }
+            gameState = 'playing';
+        }
 
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-            ctx.fill();
+        function render() {
+            ctx.fillStyle = COLORS.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (gameState !== 'playing' && gameState !== 'question') return;
+
+            let camX = player.px - canvas.width / 2 + TILE_SIZE / 2;
+            let camY = player.py - canvas.height / 2 + TILE_SIZE / 2;
+            
+            ctx.save();
+            ctx.translate(-camX, -camY);
+
+            // วาดกำแพง
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (mapData[y][x] === 1) {
+                        ctx.fillStyle = COLORS.wallFill;
+                        ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = COLORS.wallEdge;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x*TILE_SIZE + 2, y*TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                        ctx.fillStyle = COLORS.wallEdge;
+                        ctx.fillRect(x*TILE_SIZE + 10, y*TILE_SIZE + 10, 4, 4);
+                        ctx.fillRect(x*TILE_SIZE + TILE_SIZE - 14, y*TILE_SIZE + TILE_SIZE - 14, 4, 4);
+                    }
+                }
+            }
+
+            // วาดจุดออก
+            ctx.fillStyle = COLORS.portal;
+            ctx.fillRect(exitPortal.x * TILE_SIZE + 5, exitPortal.y * TILE_SIZE + 5, TILE_SIZE - 10, TILE_SIZE - 10);
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(exitPortal.x * TILE_SIZE + 8, exitPortal.y * TILE_SIZE + 8, TILE_SIZE - 16, TILE_SIZE - 16);
+
+            // วาดไอเทมและดาว
+            dots.forEach(d => {
+                if (!d.collected) {
+                    ctx.fillStyle = COLORS.dot;
+                    ctx.fillRect(d.x * TILE_SIZE + TILE_SIZE/2 - 3, d.y * TILE_SIZE + TILE_SIZE/2 - 3, 6, 6);
+                }
+            });
+            
+            stars.forEach(s => {
+                if(!s.collected) {
+                    ctx.fillStyle = '#00ffff';
+                    let sx = s.x * TILE_SIZE + TILE_SIZE/2;
+                    let sy = s.y * TILE_SIZE + TILE_SIZE/2;
+                    ctx.beginPath();
+                    ctx.moveTo(sx, sy - 8);
+                    ctx.lineTo(sx + 8, sy + 8);
+                    ctx.lineTo(sx - 8, sy + 8);
+                    ctx.fill();
+                }
+            });
+
+            // วาดค้างคาว
+            enemies.forEach(en => {
+                let px = en.px + TILE_SIZE / 2;
+                let py = en.py + TILE_SIZE / 2;
+                let half = en.size / 2;
+                
+                ctx.fillStyle = '#8800ff';
+                ctx.beginPath();
+                ctx.arc(px, py, half, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.moveTo(px - half, py);
+                ctx.lineTo(px - half - 10, py - 10);
+                ctx.lineTo(px - half - 5, py + 5);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.moveTo(px + half, py);
+                ctx.lineTo(px + half + 10, py - 10);
+                ctx.lineTo(px + half + 5, py + 5);
+                ctx.fill();
+
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(px - 6, py - 2, 4, 4);
+                ctx.fillRect(px + 2, py - 2, 4, 4);
+            });
+
+            // วาดผู้เล่นแบบพิกเซลอาร์ต
+            let offset = (TILE_SIZE - player.size) / 2;
+            let px = player.px + offset;
+            let py = player.py + offset;
+            let charData = PIXEL_CHARS[selectedCharKey];
+            let grid = charData.grid;
+            let pSize = player.size / 8;
+            let isFlashing = isMultiplierActive && Math.floor(Date.now() / 100) % 2 === 0;
+
+            for(let r=0; r<8; r++) {
+                for(let c=0; c<8; c++) {
+                    if(grid[r][c] === 1) {
+                        ctx.fillStyle = isFlashing ? '#ffffff' : charData.color;
+                        ctx.fillRect(px + c*pSize, py + r*pSize, pSize, pSize);
+                    } else if (grid[r][c] === 2) {
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(px + c*pSize, py + r*pSize, pSize, pSize);
+                    }
+                }
+            }
+            
+            // เอฟเฟกต์พุ่ง
+            if (player.isMoving) {
+                ctx.fillStyle = charData.color;
+                ctx.globalAlpha = 0.3;
+                let size = player.size;
+                if (player.vx > 0) ctx.fillRect(px - 20, py, 20, size); 
+                else if (player.vx < 0) ctx.fillRect(px + size, py, 20, size); 
+                else if (player.vy > 0) ctx.fillRect(px, py - 20, size, 20); 
+                else if (player.vy < 0) ctx.fillRect(px, py + size, size, 20); 
+                ctx.globalAlpha = 1.0;
+            }
+
+            ctx.restore();
+        }
+
+        function gameLoop(timestamp) {
+            let dt = timestamp - lastTime;
+            lastTime = timestamp;
+            update(dt);
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            const nameInput = document.getElementById('playerNameInput').value.trim();
+            if (nameInput) playerName = nameInput;
+            
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            document.getElementById('game-clear-screen').classList.add('hidden');
+            
+            score = 0;
+            level = 1;
+            uiScore.innerText = score;
+            uiLevel.innerText = level;
+            isMultiplierActive = false;
+            uiMultiplier.classList.add('hidden');
+            
+            generateMap();
+            gameState = 'playing';
+        }
+
+        function gameClear() {
+            gameState = 'gameclear';
+            document.getElementById('game-clear-screen').classList.remove('hidden');
+            score += 500; // โบนัสเคลียร์เกม
+            document.getElementById('clear-score').innerText = score;
+            uiScore.innerText = score;
+            if (score > 0) window.saveGameScore(playerName, score);
+        }
+
+        function gameOver() {
+            gameState = 'gameover';
+            document.getElementById('game-over-screen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+            if (score > 0) window.saveGameScore(playerName, score);
+        }
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+        document.getElementById('playAgainBtn').addEventListener('click', startGame);
+        
+        document.getElementById('menuBtnClear').addEventListener('click', () => {
+            document.getElementById('game-clear-screen').classList.add('hidden');
+            document.getElementById('menu-screen').classList.remove('hidden');
+            gameState = 'menu';
+            render();
         });
-    }
-
-    // 2. Draw Game State Elements
-    if (currentState === STATE.INSTRUCTIONS) {
-        drawInstructionScreen();
-    } else if (currentState === STATE.PLAYING || currentState === STATE.LEVEL_CLEAR) {
-        drawGameplayScreen();
-    } else if (currentState === STATE.GAME_CLEAR) {
-        drawGameClearScreen();
-    }
-
-    // 3. Draw Messages
-    if (messageTimer > 0) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, canvas.height / 2 - 50, canvas.width, 100);
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 36px Sarabun';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(messageText, canvas.width / 2, canvas.height / 2);
-    }
-
-    // 4. Draw AR/Mouse Cursor Feedback
-    drawCursor();
-}
-
-// --- Specific Drawing Functions ---
-
-function drawGlassRect(x, y, w, h, radius, bgStr, borderStr) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, radius);
-    
-    // Shadow for 2.5D
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-    ctx.shadowBlur = 15;
-    ctx.shadowOffsetY = 10;
-    
-    ctx.fillStyle = bgStr;
-    ctx.fill();
-    
-    ctx.shadowColor = 'transparent';
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = borderStr;
-    ctx.stroke();
-    ctx.restore();
-}
-
-function drawInstructionScreen() {
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 40px Sarabun';
-    ctx.textAlign = 'center';
-    ctx.fillText("ทดสอบการควบคุม", canvas.width / 2, canvas.height * 0.3);
-    
-    ctx.font = '24px Sarabun';
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.fillText("ใช้มือ 'จีบนิ้ว' หรือใช้เมาส์ 'คลิก' ที่ปุ่มสีเขียวเพื่อเริ่ม", canvas.width / 2, canvas.height * 0.3 + 40);
-
-    if (arStartButton) {
-        let btnColor = pointer.isHovering ? arStartButton.hoverColor : arStartButton.color;
-        drawGlassRect(arStartButton.x, arStartButton.y, arStartButton.width, arStartButton.height, 20, btnColor, 'rgba(255,255,255,0.5)');
         
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 32px Sarabun';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(arStartButton.text, arStartButton.x + arStartButton.width / 2, arStartButton.y + arStartButton.height / 2);
-    }
-}
-
-function drawGameplayScreen() {
-    const levelData = LEVEL_DATA[currentLevelIndex];
-
-    // UI Header
-    drawGlassRect(20, 20, 400, 80, 15, 'rgba(255, 255, 255, 0.1)', 'rgba(255,255,255,0.2)');
-    ctx.fillStyle = 'white';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.font = 'bold 24px Sarabun';
-    ctx.fillText(levelData.title, 40, 60);
-    
-    drawGlassRect(canvas.width - 220, 20, 200, 80, 15, 'rgba(255, 255, 255, 0.1)', 'rgba(255,255,255,0.2)');
-    ctx.textAlign = 'center';
-    ctx.fillText(`คะแนน: ${score}`, canvas.width - 120, 60);
-
-    // Draw Slots
-    slots.forEach((slot, index) => {
-        ctx.save();
-        ctx.beginPath();
-        ctx.setLineDash([10, 10]);
-        ctx.roundRect(slot.x, slot.y, slot.width, slot.height, 15);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fill();
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.stroke();
+        document.getElementById('leaderboardBtn').addEventListener('click', () => {
+            document.getElementById('leaderboard-screen').classList.remove('hidden');
+        });
         
-        // Number indicator
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.font = 'bold 40px Sarabun';
-        ctx.fillText(index + 1, slot.x + slot.width/2, slot.y + slot.height/2);
-        ctx.restore();
-    });
+        document.getElementById('closeLeaderboardBtn').addEventListener('click', () => {
+            document.getElementById('leaderboard-screen').classList.add('hidden');
+        });
+        
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            document.getElementById('game-over-screen').classList.add('hidden');
+            document.getElementById('menu-screen').classList.remove('hidden');
+            gameState = 'menu';
+            render();
+        });
 
-    // Draw Cards (draw dragged card last so it's on top)
-    cards.forEach(card => {
-        if (card !== draggedCard) drawCard(card);
-    });
-    if (draggedCard) drawCard(draggedCard, true);
+        initCharSelectUI(); 
+        resize();
+        requestAnimationFrame(gameLoop);
 
-    if (currentState === STATE.LEVEL_CLEAR) {
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(0,0, canvas.width, canvas.height);
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 48px Sarabun';
-        ctx.textAlign = 'center';
-        ctx.fillText("ผ่านด่าน!", canvas.width/2, canvas.height/2 - 40);
-        ctx.font = '24px Sarabun';
-        ctx.fillText("จีบนิ้ว หรือ คลิก เพื่อไปด่านต่อไป", canvas.width/2, canvas.height/2 + 20);
-    }
-}
-
-function drawCard(card, isDragging = false) {
-    let scale = isDragging ? 1.05 : 1;
-    let w = card.width * scale;
-    let h = card.height * scale;
-    let x = card.x - (w - card.width) / 2;
-    let y = card.y - (h - card.height) / 2;
-
-    let bgColor = isDragging ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.8)';
-    let borderColor = isDragging ? '#3b82f6' : 'rgba(255,255,255,0.8)';
-
-    drawGlassRect(x, y, w, h, 15, bgColor, borderColor);
-
-    // Emoji
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `${w * 0.4}px Arial`;
-    ctx.fillText(card.emoji, x + w / 2, y + h * 0.4);
-
-    // Text
-    ctx.fillStyle = '#1f2937';
-    ctx.font = `bold ${w * 0.12}px Sarabun`;
-    
-    // Simple text wrap handling for single line
-    let txt = card.text;
-    ctx.fillText(txt, x + w / 2, y + h * 0.8);
-}
-
-function drawGameClearScreen() {
-    // ปล่อยให้ HTML UI (gameClearUiContainer) รับหน้าที่แสดงผลทั้งหมด
-    // ตรงนี้เราแค่วาดพื้นหลังสีดำโปร่งแสงพรางตา
-    ctx.fillStyle = 'rgba(0,0,0,0.8)';
-    ctx.fillRect(0,0, canvas.width, canvas.height);
-}
-
-function drawCursor() {
-    if (currentState === STATE.INIT) return;
-
-    // AI Warning
-    if (cameraStarted && !pointer.isHandVisible && pointer.activeType === 'hand') {
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
-        ctx.roundRect(canvas.width/2 - 150, 20, 300, 40, 20);
-        ctx.fill();
-        ctx.fillStyle = 'white';
-        ctx.font = '16px Sarabun';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText("กำลังหามือของคุณ... (ใช้เมาส์แทนได้)", canvas.width/2, 40);
-    } else if (!cameraStarted) {
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.8)'; // Amber
-        ctx.roundRect(canvas.width/2 - 150, 20, 300, 40, 20);
-        ctx.fill();
-        ctx.fillStyle = 'white';
-        ctx.font = '16px Sarabun';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText("ไม่พบกล้อง กำลังใช้โหมดเมาส์/สัมผัส", canvas.width/2, 40);
-    }
-
-    // Determine Cursor State
-    let cursorColor, cursorStyle;
-    
-    if (pointer.isDown && draggedCard) {
-        cursorColor = '#22c55e'; // Green (Grabbed)
-        cursorStyle = 'solid';
-    } else if (pointer.isDown && !pointer.isHovering) {
-        cursorColor = '#ef4444'; // Red (Missed Pinch)
-        cursorStyle = 'solid';
-    } else if (pointer.isHovering) {
-        cursorColor = '#eab308'; // Yellow (Hover)
-        cursorStyle = 'dashed';
-    } else {
-        cursorColor = '#3b82f6'; // Blue (Normal)
-        cursorStyle = 'solid';
-    }
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(pointer.x, pointer.y, 15, 0, 2 * Math.PI);
-    
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = cursorColor;
-    
-    if (cursorStyle === 'dashed') {
-        ctx.setLineDash([5, 5]);
-    }
-    
-    // Add glow
-    ctx.shadowColor = cursorColor;
-    ctx.shadowBlur = 10;
-    
-    ctx.stroke();
-
-    // Draw internal icon if grabbed
-    if (pointer.isDown && draggedCard) {
-        ctx.fillStyle = cursorColor;
-        ctx.beginPath();
-        ctx.arc(pointer.x, pointer.y, 6, 0, 2 * Math.PI);
-        ctx.fill();
-    }
-    
-    ctx.restore();
-}
-
-// ==========================================
-// 8. GAME LOOP
-// ==========================================
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
-
-</script>
+    </script>
 </body>
 </html>
