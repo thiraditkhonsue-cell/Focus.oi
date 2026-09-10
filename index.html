@@ -1,86 +1,950 @@
-<!-- ... existing code ... -->
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tomb of the Code - Realistic Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Press+Start+2P&family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050407;
+            font-family: 'Prompt', sans-serif;
+            color: #fff;
+            touch-action: none;
+        }
+        .pixel-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+        .cinzel-font {
+            font-family: 'Cinzel', serif;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #15101a 0%, #050407 100%);
+        }
+        canvas {
+            display: block;
+            image-rendering: auto;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+        }
+        
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 4, 10, 0.88);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            transition: opacity 0.25s ease;
+        }
+        .hidden { display: none !important; }
+
+        .gold-btn {
+            background: linear-gradient(180deg, #ffe066 0%, #e6a800 50%, #996f00 100%);
+            color: #1a0f00;
+            padding: 14px 32px;
+            font-size: 15px;
+            font-family: 'Cinzel', serif;
+            font-weight: 900;
+            letter-spacing: 1px;
+            border: 2px solid #fff3a8;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255, 204, 0, 0.35), inset 0 2px 2px rgba(255,255,255,0.7);
+            transition: all 0.15s ease;
+            text-transform: uppercase;
+        }
+        .gold-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 204, 0, 0.55);
+        }
+        .gold-btn:active {
+            transform: translateY(1px);
+        }
+
+        .dark-btn {
+            background: linear-gradient(180deg, #2e2838 0%, #17131e 100%);
+            color: #e5e5e5;
+            padding: 10px 24px;
+            font-size: 13px;
+            border: 1px solid #4a3f5a;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .dark-btn:hover {
+            background: #3c344a;
+            color: #fff;
+            border-color: #ffcc00;
+        }
+        
+        #hud {
+            position: absolute;
+            top: 14px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+        }
+        .hud-badge {
+            background: rgba(18, 14, 25, 0.75);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            padding: 6px 14px;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        #score-val { color: #ffdb4d; font-family: 'Press Start 2P', cursive; font-size: 12px; }
+        #level-val { color: #5eead4; }
+        
+        #multiplier-badge {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.85), rgba(245, 158, 11, 0.85));
+            border: 1px solid #ffedd5;
+            animation: flamePulse 1s infinite alternate;
+        }
+        @keyframes flamePulse {
+            0% { transform: scale(1); filter: drop-shadow(0 0 5px #f59e0b); }
+            100% { transform: scale(1.05); filter: drop-shadow(0 0 14px #ef4444); }
+        }
+
+        .question-box {
+            background: linear-gradient(145deg, #1f192b 0%, #110d18 100%);
+            border: 2px solid #ec4899;
+            padding: 24px;
+            max-width: 90%;
+            width: 460px;
+            border-radius: 18px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(236, 72, 153, 0.35);
+        }
+        .ans-btn {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 13px 16px;
+            background: rgba(36, 30, 48, 0.9);
+            color: #f3f4f6;
+            border: 1px solid #4a3e61;
+            font-size: 15px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .ans-btn:hover {
+            background: #ec4899;
+            color: #fff;
+            border-color: #fbcfe8;
+            transform: translateX(4px);
+        }
+
+        .char-card {
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.04);
+            border-radius: 14px;
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .char-card:hover { background: rgba(255,255,255,0.08); }
+        .char-card.selected {
+            border-color: #ffd700;
+            background: rgba(255, 215, 0, 0.12);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.35);
+        }
+        
+        .sound-toggle {
+            pointer-events: auto;
+            cursor: pointer;
+            background: rgba(18, 14, 25, 0.8);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
         <div id="hud">
-            <div>
-                <span id="level-display">LEVEL: <span id="level">1</span>/4</span>
-                <span id="score-display">SCORE: <span id="score">0</span></span>
+            <div class="flex gap-2">
+                <div class="hud-badge">
+                    <span>STAGE</span>
+                    <span id="level-val">1</span>/5
+                </div>
+                <div class="hud-badge">
+                    <span>SCORE</span>
+                    <span id="score-val">0</span>
+                </div>
             </div>
-            <div id="multiplier-display" class="hidden">อมตะพุ่งชน! (<span id="timer">0</span>s)</div>
+            <div class="flex items-center gap-2">
+                <div id="multiplier-badge" class="hud-badge hidden text-white font-bold">
+                    ⚡ พุ่งทะลวง! (<span id="timer">4.0</span>s)
+                </div>
+                <button id="soundBtn" class="sound-toggle" title="Toggle Sound">🔊</button>
+            </div>
         </div>
 
         <!-- หน้าเมนูหลัก -->
         <div id="menu-screen" class="overlay">
-<!-- ... existing code ... -->
+            <div class="text-center mb-6">
+                <p class="cinzel-font text-amber-400 tracking-widest text-xs mb-1">ANCIENT LABYRINTH EXPEDITION</p>
+                <h1 class="cinzel-font text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-amber-400 to-amber-600 drop-shadow-[0_5px_15px_rgba(245,158,11,0.5)]">
+                    TOMB OF THE CODE
+                </h1>
+                <p class="text-sm text-slate-400 mt-2">สุสานอัลกอริทึมโบราณ • ควบคุมการเลี้ยวลื่นไหล</p>
+            </div>
+            
+            <p class="text-xs tracking-wider text-amber-300 cinzel-font mb-2">CHOOSE YOUR EXPLORER</p>
+            <div id="char-select" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"></div>
+
+            <input type="text" id="playerNameInput" placeholder="กรอกชื่อผู้กล้า..." maxlength="14"
+                   class="bg-slate-900/80 border-2 border-amber-500/60 rounded-xl px-4 py-2.5 text-center text-white placeholder-slate-500 w-72 mb-4 focus:outline-none focus:border-amber-400 shadow-inner">
+            
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button class="gold-btn" id="startBtn">START JOURNEY</button>
+                <button class="dark-btn" id="leaderboardBtn">LEADERBOARD</button>
+            </div>
+            <p class="text-xs text-slate-500 mt-6">ใช้ปุ่มลูกศร, WASD หรือปัดหน้าจอ (สามารถปัดเลี้ยวกลางทางได้ทันที)</p>
+        </div>
+
+        <!-- หน้าคำถามวิทยาการคำนวณ -->
+        <div id="question-screen" class="overlay hidden">
+            <div class="question-box">
+                <div class="flex items-center justify-center gap-2 mb-2 text-pink-400 text-xs cinzel-font font-bold">
+                    <span>✦ MYSTICAL RELIC OF WISDOM ✦</span>
+                </div>
+                <h2 id="question-text" class="text-lg font-semibold text-white mb-4 leading-relaxed"></h2>
+                <div id="answers-container"></div>
+            </div>
+        </div>
+
         <!-- หน้าจอจบเกม (ชนะ) -->
-        <div id="game-clear-screen" class="overlay hidden">
-            <h2 style="color:#00ff00; font-size: 40px; margin-bottom: 10px; text-shadow: 2px 2px #000;">YOU ESCAPED!</h2>
-            <p style="margin-bottom: 20px; font-size: 18px;">FINAL SCORE: <span id="clear-score" style="color:#ffcc00;">0</span></p>
-            <p style="margin-bottom: 30px; font-family: 'Prompt', sans-serif; font-size: 14px; text-align: center;">คุณพิชิตเขาวงกตโค้ดทั้ง 4 ด่านสำเร็จแล้ว!</p>
-            <button class="btn" id="playAgainBtn">PLAY AGAIN</button>
-            <button class="btn" id="menuBtnClear" style="font-size: 12px; background-color: #333; color: white;">MENU</button>
+        <div id="game-clear-screen" class="overlay hidden text-center">
+            <div class="text-emerald-400 text-6xl mb-2 animate-bounce">🏆</div>
+            <h2 class="cinzel-font text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-400 mb-2">
+                TOMB CONQUERED!
+            </h2>
+            <p class="text-amber-300 text-xl font-bold mb-1">FINAL SCORE: <span id="clear-score">0</span></p>
+            <p class="text-slate-300 text-sm max-w-sm mb-6">คุณพิชิตเขาวงกตโค้ดทั้ง 5 ด่าน และไขปริศนาแห่งปัญญาได้สำเร็จ!</p>
+            <div class="flex gap-3">
+                <button class="gold-btn" id="playAgainBtn">PLAY AGAIN</button>
+                <button class="dark-btn" id="menuBtnClear">MAIN MENU</button>
+            </div>
         </div>
 
         <!-- หน้าจอจบเกม (แพ้) -->
-        <div id="game-over-screen" class="overlay hidden">
-            <h2 style="color:#ff3333; font-size: 40px; margin-bottom: 10px; text-shadow: 2px 2px #000;">GAME OVER</h2>
-            <p style="margin-bottom: 20px; font-size: 18px;">SCORE: <span id="final-score" style="color:#ffcc00;">0</span></p>
-            <button class="btn" id="restartBtn">RESTART LEVEL</button>
-            <button class="btn" id="menuBtn" style="font-size: 12px; background-color: #333; color: white;">MENU</button>
+        <div id="game-over-screen" class="overlay hidden text-center">
+            <div class="text-rose-500 text-6xl mb-2">💀</div>
+            <h2 class="cinzel-font text-4xl sm:text-5xl font-black text-rose-500 mb-2 drop-shadow-[0_0_20px_rgba(244,63,94,0.6)]">
+                FALLEN IN THE DARK
+            </h2>
+            <p class="text-slate-300 mb-2">คะแนนที่ทำได้: <span id="final-score" class="text-amber-400 font-bold">0</span></p>
+            <p class="text-xs text-slate-400 mb-6">ค้างคาวปีศาจโจมตีคุณ จงเรียนรู้จังหวะแล้วกลับมาทวงชัยชนะ!</p>
+            <div class="flex gap-3">
+                <button class="gold-btn" id="restartBtn">TRY AGAIN</button>
+                <button class="dark-btn" id="menuBtn">MAIN MENU</button>
+            </div>
+        </div>
+
+        <!-- หน้าจอกระดานผู้นำ -->
+        <div id="leaderboard-screen" class="overlay hidden">
+            <h2 class="cinzel-font text-3xl font-black text-amber-400 mb-2 tracking-wider">HALL OF CODERS</h2>
+            <div id="db-status" class="text-xs text-slate-400 mb-3 flex items-center gap-2">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>ระบบฐานข้อมูล Cloud เชื่อมต่อแล้ว</span>
+            </div>
+            <div id="leaderboard-list" class="w-80 max-w-full max-h-72 overflow-y-auto space-y-2 mb-4 pr-1">
+                <div class="text-center text-slate-400 text-sm py-4">กำลังโหลดสถิติ...</div>
+            </div>
+            
+            <div class="flex gap-2">
+                <button class="dark-btn" id="openAddQBtn" style="font-size:11px; border-color:#ec4899;">+ เพิ่มคำถามลง DB</button>
+                <button class="dark-btn" id="closeLeaderboardBtn">BACK</button>
+            </div>
+        </div>
+
+        <!-- หน้าต่างเพิ่มคำถามลงฐานข้อมูล Cloud -->
+        <div id="add-question-screen" class="overlay hidden">
+            <div class="question-box text-left" style="max-width: 440px;">
+                <h3 class="cinzel-font text-center text-amber-400 font-bold mb-3">คลังคำถามสุสานโค้ด (Cloud DB)</h3>
+                <label class="text-xs text-slate-300">คำถาม:</label>
+                <input type="text" id="newQText" placeholder="พิมพ์คำถามวิทยาการคำนวณ..." class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white mb-2 focus:outline-none">
+                
+                <label class="text-xs text-emerald-400">คำตอบที่ถูกต้อง:</label>
+                <input type="text" id="newQCorrect" placeholder="คำตอบที่ถูกต้อง..." class="w-full bg-slate-900 border border-emerald-600/60 rounded p-1.5 text-xs text-white mb-2 focus:outline-none">
+                
+                <label class="text-xs text-rose-300">ตัวเลือกลวง 1, 2, 3:</label>
+                <input type="text" id="newQOpt1" placeholder="ตัวเลือกลวงที่ 1..." class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white mb-1.5 focus:outline-none">
+                <input type="text" id="newQOpt2" placeholder="ตัวเลือกลวงที่ 2..." class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white mb-1.5 focus:outline-none">
+                <input type="text" id="newQOpt3" placeholder="ตัวเลือกลวงที่ 3..." class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white mb-3 focus:outline-none">
+                
+                <div class="flex justify-end gap-2">
+                    <button class="gold-btn" id="saveQBtn" style="padding:8px 18px; font-size:12px;">บันทึกลงฐานข้อมูล</button>
+                    <button class="dark-btn" id="cancelAddQBtn" style="padding:8px 14px; font-size:12px;">ยกเลิก</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
+        // Web Audio Synthesizer (No external asset files needed)
+        const AudioSys = {
+            ctx: null,
+            enabled: true,
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            },
+            play(type) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                try {
+                    const t = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    if (type === 'dash') {
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(280, t);
+                        osc.frequency.exponentialRampToValueAtTime(140, t + 0.12);
+                        gain.gain.setValueAtTime(0.18, t);
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                        osc.start(t);
+                        osc.stop(t + 0.12);
+                    } else if (type === 'coin') {
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(987, t);
+                        osc.frequency.setValueAtTime(1318, t + 0.05);
+                        gain.gain.setValueAtTime(0.15, t);
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+                        osc.start(t);
+                        osc.stop(t + 0.15);
+                    } else if (type === 'star') {
+                        const notes = [523, 659, 783, 1046];
+                        notes.forEach((freq, idx) => {
+                            const subOsc = this.ctx.createOscillator();
+                            const subGain = this.ctx.createGain();
+                            subOsc.connect(subGain);
+                            subGain.connect(this.ctx.destination);
+                            subOsc.type = 'sine';
+                            subOsc.frequency.setValueAtTime(freq, t + idx * 0.06);
+                            subGain.gain.setValueAtTime(0.12, t + idx * 0.06);
+                            subGain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.06 + 0.2);
+                            subOsc.start(t + idx * 0.06);
+                            subOsc.stop(t + idx * 0.06 + 0.2);
+                        });
+                    } else if (type === 'hit') {
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(320, t);
+                        osc.frequency.exponentialRampToValueAtTime(40, t + 0.25);
+                        gain.gain.setValueAtTime(0.3, t);
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+                        osc.start(t);
+                        osc.stop(t + 0.25);
+                    } else if (type === 'power') {
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(440, t);
+                        osc.frequency.exponentialRampToValueAtTime(880, t + 0.2);
+                        gain.gain.setValueAtTime(0.2, t);
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+                        osc.start(t);
+                        osc.stop(t + 0.25);
+                    }
+                } catch(e) {}
+            }
+        };
+
+        const soundBtn = document.getElementById('soundBtn');
+        soundBtn.addEventListener('click', () => {
+            AudioSys.enabled = !AudioSys.enabled;
+            soundBtn.innerText = AudioSys.enabled ? '🔊' : '🔇';
+        });
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global app configuration
+        const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'tomb-of-code-realistic-v1';
+        let db = null;
+        let auth = null;
+        let isFirebaseReady = false;
+
+        // Fallback local data if cloud config is not set
+        let localLeaderboard = [
+            { name: "AdaLovelace", score: 2850, stage: 5, charName: "Pharaoh Gold" },
+            { name: "Turing_99", score: 2420, stage: 5, charName: "Cyber Ninja" },
+            { name: "CyberNeo", score: 1980, stage: 4, charName: "Anubis Warden" },
+            { name: "PharaohCode", score: 1650, stage: 3, charName: "Pharaoh Gold" },
+            { name: "BitExplorer", score: 1200, stage: 2, charName: "Vampire Lord" }
+        ];
+
+        // 1. Initializing Cloud Database
+        try {
+            if (typeof window.__firebase_config !== 'undefined' && window.__firebase_config) {
+                const firebaseConfig = JSON.parse(window.__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Authentication prior to database queries
+                const authInit = typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token
+                    ? signInWithCustomToken(auth, window.__initial_auth_token)
+                    : signInAnonymously(auth);
+
+                authInit.then(async () => {
+                    isFirebaseReady = true;
+                    const statusEl = document.getElementById('db-status');
+                    if (statusEl) {
+                        statusEl.innerHTML = `<span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Online (UID: ${auth.currentUser.uid.slice(0, 8)}...)</span>`;
+                    }
+                    
+                    // Setup Realtime Leaderboard Listener
+                    setupRealtimeLeaderboard();
+                    // Seed & Sync Questions from Cloud DB
+                    syncQuestionsFromFirestore();
+                }).catch((err) => {
+                    console.warn("Database Auth Fallback:", err);
+                });
+            }
+        } catch(e) {
+            console.warn("Database initialization failed:", e);
+        }
+
+        // 2. Real-time Leaderboard Listener
+        function setupRealtimeLeaderboard() {
+            if (!isFirebaseReady || !auth.currentUser) return;
+            try {
+                // Rule 1 & 2: Strict path, no compound queries, sort in JS
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+                onSnapshot(colRef, (snapshot) => {
+                    let scores = [...localLeaderboard];
+                    snapshot.forEach(doc => {
+                        const d = doc.data();
+                        if (d && typeof d.score === 'number') {
+                            scores.push(d);
+                        }
+                    });
+                    renderLeaderboardUI(scores);
+                }, (error) => {
+                    console.warn("Leaderboard snapshot error:", error);
+                    renderLeaderboardUI(localLeaderboard);
+                });
+            } catch(e) {}
+        }
+
+        function renderLeaderboardUI(scores) {
+            const listEl = document.getElementById('leaderboard-list');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+
+            // In-memory sort by score descending
+            scores.sort((a, b) => b.score - a.score);
+            const top10 = scores.slice(0, 10);
+
+            if (top10.length === 0) {
+                listEl.innerHTML = '<div class="text-center text-slate-400 text-sm py-4">ยังไม่มีสถิติในฐานข้อมูล</div>';
+                return;
+            }
+
+            top10.forEach((s, idx) => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center bg-slate-800/80 px-3 py-2 rounded-lg border border-slate-700 text-sm';
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="cinzel-font font-bold text-xs ${idx < 3 ? 'text-amber-400' : 'text-slate-400'}">#${idx+1}</span>
+                        <div>
+                            <div class="text-slate-200 font-medium text-xs sm:text-sm">${s.name || 'Anonymous'}</div>
+                            <div class="text-[10px] text-slate-400">${s.charName || 'Explorer'} • ด่าน ${s.stage || 1}</div>
+                        </div>
+                    </div>
+                    <span class="font-mono text-amber-300 font-bold">${s.score}</span>
+                `;
+                listEl.appendChild(row);
+            });
+        }
+
+        // 3. Save Score to Cloud Database (Public Leaderboard & Private User History)
+        window.saveGameScore = async (name, score, stage = 1, charName = "Pharaoh Gold") => {
+            const entry = {
+                name: name || "Anonymous",
+                score: score,
+                stage: stage,
+                charName: charName,
+                timestamp: Date.now()
+            };
+            localLeaderboard.push(entry);
+
+            if (isFirebaseReady && auth && auth.currentUser) {
+                try {
+                    const userId = auth.currentUser.uid;
+                    // Public record
+                    const publicCol = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+                    await addDoc(publicCol, { ...entry, userId });
+                    // Private record
+                    const userCol = collection(db, 'artifacts', appId, 'users', userId, 'gameplay_logs');
+                    await addDoc(userCol, entry);
+                } catch(e) {
+                    console.warn("Error saving score to database:", e);
+                }
+            }
+            renderLeaderboardUI(localLeaderboard);
+        };
+
+        // 4. Auto-seeding and syncing Question Bank in Firestore
+        async function syncQuestionsFromFirestore() {
+            if (!isFirebaseReady || !auth.currentUser) return;
+            try {
+                const qCol = collection(db, 'artifacts', appId, 'public', 'data', 'questions');
+                const snap = await getDocs(qCol);
+                
+                if (snap.empty) {
+                    // Seed initial questions into cloud database
+                    if (window.QUESTION_DATABASE && window.QUESTION_DATABASE.length > 0) {
+                        for (const item of window.QUESTION_DATABASE) {
+                            await addDoc(qCol, item);
+                        }
+                    }
+                } else {
+                    // Load questions dynamically from cloud
+                    const cloudQuestions = [];
+                    snap.forEach(doc => {
+                        const qData = doc.data();
+                        if (qData && qData.q && qData.correct) {
+                            cloudQuestions.push(qData);
+                        }
+                    });
+                    if (cloudQuestions.length > 0) {
+                        window.QUESTION_DATABASE = cloudQuestions;
+                    }
+                }
+            } catch(e) {
+                console.warn("Question sync error:", e);
+            }
+        }
+
+        // 5. Add custom question directly to Cloud Database
+        window.addQuestionToCloud = async (questionObj) => {
+            if (!questionObj.q || !questionObj.correct) return false;
+            if (window.QUESTION_DATABASE) window.QUESTION_DATABASE.push(questionObj);
+
+            if (isFirebaseReady && auth && auth.currentUser) {
+                try {
+                    const qCol = collection(db, 'artifacts', appId, 'public', 'data', 'questions');
+                    await addDoc(qCol, questionObj);
+                    return true;
+                } catch(e) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        window.loadLeaderboard = () => renderLeaderboardUI(localLeaderboard);
+    </script>
+
+    <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        
-        let gameState = 'menu'; 
-        let score = 0;
-        let level = 1;
-        const MAX_LEVEL = 4; // จบที่ด่าน 4
-        let playerName = "Player";
-        let isMultiplierActive = false;
-        
-        const uiMultiplier = document.getElementById('multiplier-display');
-        const uiTimer = document.getElementById('timer');
 
+        // Character definitions with realistic procedural models
+        const CHARACTERS = {
+            'pharaoh': {
+                name: 'Pharaoh Gold',
+                desc: 'หน้ากากฟาโรห์ทองคำ',
+                color: '#f59e0b',
+                draw(ctx, x, y, size, facingX = 1, isMoving = false, t = 0) {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    
+                    // Golden ancient mask head
+                    const r = size * 0.44;
+                    // Nemes headdress (Blue and Gold stripes)
+                    const gradNemes = ctx.createLinearGradient(-r * 1.3, -r, r * 1.3, r);
+                    gradNemes.addColorStop(0, '#1e3a8a');
+                    gradNemes.addColorStop(0.5, '#fbbf24');
+                    gradNemes.addColorStop(1, '#1e3a8a');
+                    
+                    ctx.fillStyle = gradNemes;
+                    ctx.beginPath();
+                    ctx.moveTo(-r * 1.25, -r * 0.4);
+                    ctx.lineTo(r * 1.25, -r * 0.4);
+                    ctx.lineTo(r * 0.9, r * 1.1);
+                    ctx.lineTo(-r * 0.9, r * 1.1);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Mask Face (Polished Gold with 3D bevel gradient)
+                    const faceGrad = ctx.createRadialGradient(-r*0.2, -r*0.3, r*0.1, 0, 0, r);
+                    faceGrad.addColorStop(0, '#fffbeb');
+                    faceGrad.addColorStop(0.3, '#fef08a');
+                    faceGrad.addColorStop(0.8, '#d97706');
+                    faceGrad.addColorStop(1, '#78350f');
+
+                    ctx.fillStyle = faceGrad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Royal Cobra Emblem (Uraeus)
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.arc(0, -r * 0.85, r * 0.22, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Glowing Cyan Eyes
+                    const eyeShiftX = facingX * 3;
+                    ctx.fillStyle = '#06b6d4';
+                    ctx.shadowColor = '#22d3ee';
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.ellipse(-r * 0.35 + eyeShiftX, -r * 0.1, r * 0.2, r * 0.12, 0, 0, Math.PI*2);
+                    ctx.ellipse(r * 0.35 + eyeShiftX, -r * 0.1, r * 0.2, r * 0.12, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    // Black Egyptian Kohl Eye Liners
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(-r * 0.6 + eyeShiftX, -r * 0.1);
+                    ctx.lineTo(-r * 0.15 + eyeShiftX, -r * 0.1);
+                    ctx.moveTo(r * 0.15 + eyeShiftX, -r * 0.1);
+                    ctx.lineTo(r * 0.6 + eyeShiftX, -r * 0.1);
+                    ctx.stroke();
+
+                    // Royal Beard
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fillRect(-r * 0.18, r * 0.7, r * 0.36, r * 0.4);
+
+                    ctx.restore();
+                }
+            },
+            'cyber': {
+                name: 'Cyber Ninja',
+                desc: 'นินจาไซเบอร์เนติกส์',
+                color: '#06b6d4',
+                draw(ctx, x, y, size, facingX = 1) {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    const r = size * 0.45;
+
+                    // Carbon Helmet
+                    const helmGrad = ctx.createLinearGradient(-r, -r, r, r);
+                    helmGrad.addColorStop(0, '#334155');
+                    helmGrad.addColorStop(0.6, '#0f172a');
+                    helmGrad.addColorStop(1, '#020617');
+                    ctx.fillStyle = helmGrad;
+                    ctx.beginPath();
+                    ctx.roundRect(-r, -r, r*2, r*2, [r*0.6, r*0.6, r*0.2, r*0.2]);
+                    ctx.fill();
+                    ctx.strokeStyle = '#64748b';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    // Neon Visor
+                    const visorShift = facingX * 3;
+                    const visorGrad = ctx.createLinearGradient(-r*0.8, 0, r*0.8, 0);
+                    visorGrad.addColorStop(0, '#06b6d4');
+                    visorGrad.addColorStop(0.5, '#38bdf8');
+                    visorGrad.addColorStop(1, '#06b6d4');
+
+                    ctx.shadowColor = '#38bdf8';
+                    ctx.shadowBlur = 10;
+                    ctx.fillStyle = visorGrad;
+                    ctx.beginPath();
+                    ctx.roundRect(-r*0.75 + visorShift, -r*0.2, r*1.5, r*0.4, 4);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    // Ear Antennas
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillRect(-r*1.1, -r*0.5, 3, r);
+                    ctx.fillRect(r*1.1 - 3, -r*0.5, 3, r);
+
+                    ctx.restore();
+                }
+            },
+            'vampire': {
+                name: 'Vampire Lord',
+                desc: 'เจ้าแห่งรัตติกาล',
+                color: '#f43f5e',
+                draw(ctx, x, y, size, facingX = 1) {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    const r = size * 0.44;
+
+                    // Dark Cowl Hood
+                    ctx.fillStyle = '#1e1b4b';
+                    ctx.beginPath();
+                    ctx.arc(0, -r*0.1, r*1.15, Math.PI * 0.8, Math.PI * 2.2);
+                    ctx.lineTo(r*0.9, r*1.2);
+                    ctx.lineTo(-r*0.9, r*1.2);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Pale Face
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r*0.85, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Glowing Crimson Eyes
+                    const eyeShiftX = facingX * 3;
+                    ctx.fillStyle = '#e11d48';
+                    ctx.shadowColor = '#f43f5e';
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.arc(-r*0.3 + eyeShiftX, -r*0.1, r*0.16, 0, Math.PI*2);
+                    ctx.arc(r*0.3 + eyeShiftX, -r*0.1, r*0.16, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    // Vampire Fangs
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.moveTo(-r*0.2, r*0.35);
+                    ctx.lineTo(-r*0.1, r*0.6);
+                    ctx.lineTo(0, r*0.35);
+                    ctx.moveTo(0, r*0.35);
+                    ctx.lineTo(r*0.1, r*0.6);
+                    ctx.lineTo(r*0.2, r*0.35);
+                    ctx.fill();
+
+                    ctx.restore();
+                }
+            },
+            'anubis': {
+                name: 'Anubis Warden',
+                desc: 'ผู้พิทักษ์วิญญาณอนูบิส',
+                color: '#a855f7',
+                draw(ctx, x, y, size, facingX = 1) {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    const r = size * 0.44;
+
+                    // Jackal Ears
+                    ctx.fillStyle = '#18181b';
+                    ctx.beginPath();
+                    ctx.moveTo(-r*0.9, -r*0.2);
+                    ctx.lineTo(-r*0.6, -r*1.4);
+                    ctx.lineTo(-r*0.1, -r*0.5);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(r*0.9, -r*0.2);
+                    ctx.lineTo(r*0.6, -r*1.4);
+                    ctx.lineTo(r*0.1, -r*0.5);
+                    ctx.fill();
+
+                    // Gold Ear Liners
+                    ctx.fillStyle = '#eab308';
+                    ctx.fillRect(-r*0.65, -r*1.1, 2, r*0.7);
+                    ctx.fillRect(r*0.65, -r*1.1, 2, r*0.7);
+
+                    // Jackal Head
+                    ctx.fillStyle = '#27272a';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r*0.9, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // Snout
+                    ctx.fillStyle = '#09090b';
+                    ctx.beginPath();
+                    ctx.ellipse(facingX * 3, r*0.3, r*0.4, r*0.25, 0, 0, Math.PI*2);
+                    ctx.fill();
+
+                    // Mystical Violet Eyes
+                    ctx.fillStyle = '#c084fc';
+                    ctx.shadowColor = '#d8b4fe';
+                    ctx.shadowBlur = 9;
+                    ctx.beginPath();
+                    ctx.arc(-r*0.35 + facingX*3, -r*0.1, r*0.16, 0, Math.PI*2);
+                    ctx.arc(r*0.35 + facingX*3, -r*0.1, r*0.16, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    ctx.restore();
+                }
+            }
+        };
+
+        let selectedCharKey = 'pharaoh';
+
+        function initCharSelectUI() {
+            const container = document.getElementById('char-select');
+            container.innerHTML = '';
+
+            Object.keys(CHARACTERS).forEach(key => {
+                const c = CHARACTERS[key];
+                const card = document.createElement('div');
+                card.className = `char-card ${key === selectedCharKey ? 'selected' : ''}`;
+                
+                const cCanvas = document.createElement('canvas');
+                cCanvas.width = 54;
+                cCanvas.height = 54;
+                const cctx = cCanvas.getContext('2d');
+                c.draw(cctx, 27, 27, 44, 1);
+
+                const nameEl = document.createElement('div');
+                nameEl.className = 'text-xs font-semibold text-slate-200 mt-1';
+                nameEl.innerText = c.name;
+
+                card.appendChild(cCanvas);
+                card.appendChild(nameEl);
+
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.char-card').forEach(el => el.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedCharKey = key;
+                    AudioSys.play('coin');
+                });
+
+                container.appendChild(card);
+            });
+        }
+    </script>
+
+    <script>
+        const QUESTION_DATABASE = [
+            {
+                q: "เมื่อเจอปัญหาใหญ่ เช่น 'ห้องนอนรกมาก' แล้วเราแบ่งเป็นทำความสะอาดโต๊ะ กวาดพื้น เก็บเตียง ตรงกับแนวคิดใด?",
+                options: ["การแยกย่อยปัญหา (Decomposition)", "การหารูปแบบ (Pattern)", "การคิดเชิงนามธรรม (Abstraction)", "การเขียนโปรแกรม (Coding)"],
+                correct: "การแยกย่อยปัญหา (Decomposition)"
+            },
+            {
+                q: "หากต้องการให้ตัวละครในเกมเดินไปข้างหน้า 10 ก้าวซ้ำๆ กัน 5 รอบ ควรใช้คำสั่งใด?",
+                options: ["ทำซ้ำ (Loop / Repeat)", "ถ้า...แล้ว (If...Else)", "กำหนดตัวแปร (Variable)", "หยุดการทำงาน (Stop)"],
+                correct: "ทำซ้ำ (Loop / Repeat)"
+            },
+            {
+                q: "ข้อใดเป็น 'รหัสผ่าน (Password)' ที่ปลอดภัยและคาดเดาได้ยากที่สุดสำหรับ ม.ต้น?",
+                options: ["M4th#Pass2026!", "12345678", "password", "วันเดือนปีเกิดของเรา"],
+                correct: "M4th#Pass2026!"
+            },
+            {
+                q: "เมื่อได้รับข้อความ 'คุณได้รับรางวัลเงินสด 1 แสนบาท คลิกที่ลิงก์นี้เพื่อรับเงิน' เราควรทำอย่างไร?",
+                options: ["ไม่กดลิงก์และลบข้อความทิ้งทันที", "รีบคลิกเพื่อกรอกข้อมูลบัญชี", "ส่งต่อให้เพื่อนทุกคนในห้อง", "โทรบอกรหัสบัตรประชาชนให้เขาทราบ"],
+                correct: "ไม่กดลิงก์และลบข้อความทิ้งทันที"
+            },
+            {
+                q: "ในโปรแกรม Scratch หากต้องการให้ตัวละครตรวจจับว่า 'ถ้าแตะโดนสีแดง ให้เกมโอเวอร์' ต้องใช้บล็อกคำสั่งใด?",
+                options: ["ถ้า...แล้ว (if...then)", "ทำซ้ำตลอด (forever)", "พูด (say)", "เปลี่ยนขนาด (change size)"],
+                correct: "ถ้า...แล้ว (if...then)"
+            },
+            {
+                q: "ข้อใดคือการกลั่นแกล้งบนโลกออนไลน์ (Cyberbullying)?",
+                options: ["แอบถ่ายรูปเพื่อนไปตัดต่อล้อเลียนในโซเชียล", "ชวนเพื่อนเข้ากลุ่มทำงานโครงงาน", "ส่งการบ้านให้เพื่อนดูแนวทาง", "กดไลก์รูปภาพแมวน่ารัก"],
+                correct: "แอบถ่ายรูปเพื่อนไปตัดต่อล้อเลียนในโซเชียล"
+            },
+            {
+                q: "ข้อมูลใดจัดเป็น 'ข้อมูลส่วนตัว (Personal Data)' ที่ไม่ควรโพสต์สาธารณะลงอินเทอร์เน็ต?",
+                options: ["เลขบัตรประชาชนและที่อยู่บ้าน", "ชื่อเพลงที่ชอบฟัง", "สายพันธุ์สัตว์เลี้ยงที่ชอบ", "อาหารกลางวันที่อยากกิน"],
+                correct: "เลขบัตรประชาชนและที่อยู่บ้าน"
+            },
+            {
+                q: "การวาดแผนที่เส้นทางจากบ้านไปโรงเรียน โดยวาดเฉพาะจุดสำคัญ ไม่ใส่ต้นไม้ทุกต้น ตรงกับข้อใด?",
+                options: ["การคิดเชิงนามธรรม (Abstraction)", "การแยกส่วนประกอบ", "การวนซ้ำ", "การแก้ไขจุดบกพร่อง (Debug)"],
+                correct: "การคิดเชิงนามธรรม (Abstraction)"
+            },
+            {
+                q: "ข้อใดคือการตรวจสอบ 'ข่าวปลอม (Fake News)' ที่ถูกต้องที่สุด?",
+                options: ["เช็กแหล่งที่มา วันที่ และเทียบกับสำนักข่าวที่น่าเชื่อถือ", "เชื่อทันทีเพราะมีคนแชร์เยอะมาก", "เชื่อเพราะพาดหัวข่าวดูตื่นเต้นน่ากลัว", "รีบแชร์บอกต่อทันทีโดยไม่ต้องอ่านเนื้อหา"],
+                correct: "เช็กแหล่งที่มา วันที่ และเทียบกับสำนักข่าวที่น่าเชื่อถือ"
+            },
+            {
+                q: "ในทางคอมพิวเตอร์ 'บั๊ก (Bug)' หมายถึงอะไร?",
+                options: ["ข้อผิดพลาดในการทำงานของโปรแกรม", "แมลงที่บินเข้าไปในแป้นพิมพ์", "อุปกรณ์คอมพิวเตอร์พัง", "ปุ่มคีย์บอร์ดที่กดไม่ติด"],
+                correct: "ข้อผิดพลาดในการทำงานของโปรแกรม"
+            },
+            {
+                q: "คำว่า 'อัลกอริทึม (Algorithm)' เปรียบเสมือนสิ่งใดในชีวิตประจำวันมากที่สุด?",
+                options: ["ขั้นตอนการทำบะหมี่กึ่งสำเร็จรูปตามหลังซอง", "หนังสือการ์ตูนที่อ่านหน้าไหนก่อนก็ได้", "กระเป๋านักเรียนที่ใส่ของปนกัน", "การเปิดดูทีวีเปลี่ยนช่องไปเรื่อยๆ"],
+                correct: "ขั้นตอนการทำบะหมี่กึ่งสำเร็จรูปตามหลังซอง"
+            },
+            {
+                q: "ในการเขียนโปรแกรม หากต้องการเก็บ 'คะแนนของผู้เล่น' ที่เพิ่มขึ้นเรื่อยๆ ต้องใช้สิ่งใด?",
+                options: ["ตัวแปร (Variable)", "ฉากหลัง (Backdrop)", "เสียง (Sound)", "ตัวละคร (Sprite)"],
+                correct: "ตัวแปร (Variable)"
+            }
+        ];
+    </script>
+
+    <script>
+        const TILE_SIZE = 40;
+        let COLS = 15;
+        let ROWS = 19;
+
+        // PREDEFINED_MAPS: Designed with proper corridor networks & T-junctions
+        // Ensuring complete access to the CENTER of Level 3, Level 4, and Level 5!
         const PREDEFINED_MAPS = [
-            // ด่านที่ 1: แนะนำวิธีการเล่น (ง่ายสุด)
+            // Level 1: ทางเดินกว้างเพื่อฝึกจังหวะการเลี้ยว
             [
                 "111111111111111",
                 "1P...........*1",
                 "1111111111111.1",
-                "1.............1",
+                "1*............1",
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
-                "1.............1",
+                "1*............1",
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
-                "1.............1",
+                "1*............1",
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
-                "1.............1",
+                "1*............1",
                 "1.1111111111111",
-                "1.............1",
-                "1111111111111.1",
-                "1.............1",
-                "1.1111111111111",
-                "1.............1",
-                "1111111111111.1",
-                "1E............1",
+                "1............E1",
                 "111111111111111"
             ],
-            // ด่านที่ 2: เริ่มมีค้างคาวกีดขวาง
+            // Level 2: เพิ่มค้างคาวลาดตระเวนแนวขวาง
             [
                 "111111111111111",
                 "1P...........*1",
                 "1111111111111.1",
-                "1.......-.....1",
-                "1.1111111111111",
-                "1.............1",
-                "1111111111111.1",
-                "1.......-.....1",
+                "1*......-.....1",
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
@@ -88,77 +952,793 @@
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
-                "1.......-.....1",
+                "1*......-.....1",
                 "1.1111111111111",
                 "1.............1",
                 "1111111111111.1",
-                "1.......-.....1",
+                "1*......-.....1",
                 "1.1111111111111",
-                "1.............1",
-                "1111111111111.1",
-                "1.............E1",
+                "1E............1",
                 "111111111111111"
             ],
-            // ด่านที่ 3: เขาวงกตซับซ้อน (เน้นการเลี้ยวหาทางออก ลดจำนวนปีศาจลง)
+            // Level 3: เขาวงกตห้องโถงกลาง (แก้ไขทางเข้าตรงกลางเปิดโล่ง 4 ทิศทาง พร้อมจุดเลี้ยว)
             [
                 "111111111111111",
-                "1P..1.........1",
-                "111.1.1111111.1",
-                "1...1.......1.1",
-                "1.111111111.1.1",
-                "1.........1.1.1",
-                "111111111.1.1.1",
-                "1*........1.1.1",
-                "1.111111111.1.1",
-                "1.1.........1.1",
-                "1.1.111111111.1",
-                "1.1.........1.1",
-                "1.111111111.1.1",
-                "1.1...*...1.1.1",
-                "1.1.11111.1.1.1",
-                "1.1.....1.1.1.1",
-                "1.11111.1.1.1.1",
-                "1.......1...1.1",
-                "1111111111111.1",
-                "1.............1",
-                "1.1111111111111",
-                "1.............1",
-                "1111111111111.1",
-                "1E..........-.1",
+                "1P....1...*...1",
+                "1.111.1.11111.1",
+                "1.1...........1",
+                "1.1.111.111.1.1",
+                "1...1.....1.1.1",
+                "111.1..*..1.1.1",
+                "1...1..-..1...1",
+                "1.111.....111.1",
+                "1.....-.*.....1",
+                "1.111.....111.1",
+                "1...1..-..1...1",
+                "111.1..*..1.111",
+                "1...1.....1.1.1",
+                "1.1.111.111.1.1",
+                "1.1...........1",
+                "1.111.1.11111.1",
+                "1*....1......E1",
                 "111111111111111"
             ],
-            // ด่านที่ 4: บททดสอบสุดท้าย (ฝูงค้างคาว)
+            // Level 4: วิหารแกนกลางโค้ด (The Core Maze) ทางเดินรอบนอกทะลุห้องโถงกลางกว้างขวาง
             [
                 "111111111111111",
-                "1P....*.....-.1",
-                "1111111111111.1",
-                "1.-.....*.....1",
-                "1.1111111111111",
-                "1.......-....*1",
-                "1111111111111.1",
-                "1.*.....-.....1",
-                "1.1111111111111",
-                "1.......-....*1",
-                "1111111111111.1",
-                "1.-.....*.....1",
-                "1.1111111111111",
-                "1.......-....*1",
-                "1111111111111.1",
-                "1.*.....-.....1",
-                "1.1111111111111",
-                "1.......-....*1",
-                "1111111111111.1",
-                "1.-.....*.....1",
-                "1.1111111111111",
-                "1.............1",
-                "1111111111111.1",
-                "1.............E1",
+                "1P*...1...*..*1",
+                "1.111.1.1.111.1",
+                "1.....-.......1",
+                "1.111.111.111.1",
+                "1...1.....1...1",
+                "111.1..-..1.111",
+                "1...1..*..1...1",
+                "1.1.........1.1",
+                "1.*...-.-...*.1",
+                "1.1.........1.1",
+                "1...1..*..1...1",
+                "111.1..-..1.111",
+                "1...1.....1...1",
+                "1.111.111.111.1",
+                "1.....-.......1",
+                "1.111.1.1.111.1",
+                "1*....1......E1",
+                "111111111111111"
+            ],
+            // Level 5: สุสานบรรพชนชั้นสูงสุด (The Pharaoh's Sanctuary)
+            // ทางเชื่อมตาข่ายเปิดกว้างทะลุใจกลางห้องโถง 4 ทิศทาง พร้อมจุดหลบค้างคาวและศิลาปัญญา
+            [
+                "111111111111111",
+                "1P....*...*...1",
+                "1.111.11111.1.1",
+                "1.1...-.....1.1",
+                "1.1.111.111.1.1",
+                "1...1...-...1.1",
+                "111.1.111.1.1.1",
+                "1...-..*..-...1",
+                "1.111.111.111.1",
+                "1.1...-.*.-...1",
+                "1.111.111.111.1",
+                "1...-..*..-...1",
+                "111.1.111.1.1.1",
+                "1...1...-...1.1",
+                "1.1.111.111.1.1",
+                "1.1...-.....1.1",
+                "1.111.11111.1.1",
+                "1*....*...*..E1",
                 "111111111111111"
             ]
         ];
+    </script>
+
+    <script>
+        let gameState = 'menu';
+        let score = 0;
+        let level = 1;
+        const MAX_LEVEL = 5;
+        let playerName = "Player";
+        let isMultiplierActive = false;
+        let multiplierTimer = 0;
+        const MULTIPLIER_DURATION = 4000;
+        let lastTime = 0;
+        let mapData = [];
+
+        const player = {
+            x: 0, y: 0,
+            px: 0, py: 0,
+            vx: 0, vy: 0,
+            facingX: 1,
+            isMoving: false,
+            queuedDir: null, // Buffered steering for seamless turning
+            size: TILE_SIZE * 0.72
+        };
+
+        let dots = [];
+        let stars = [];
+        let enemies = [];
+        let particles = [];
+        let exitPortal = { x: 0, y: 0 };
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        const uiScore = document.getElementById('score-val');
+        const uiLevel = document.getElementById('level-val');
+        const uiMultiplier = document.getElementById('multiplier-badge');
+        const uiTimer = document.getElementById('timer');
 
         function resize() {
-<!-- ... existing code ... -->
-```
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
 
-ตอนนี้ด่านที่ 3 จะเป็นทางเดินคดเคี้ยวที่ไม่มีค้างคาวดักอยู่ระหว่างทางเลย (มีแค่ตัวเดียวเฝ้าประตูทางออก) ผู้เล่นจะต้องใช้ไหวพริบในการสไลด์ตัวตามผนังเพื่อหาทางเข้าไปให้ถึงใจกลางแล้วหาทางออกให้ได้ครับ ลองทดสอบดูได้เลยครับ!
+        function generateMap() {
+            let mapIndex = level - 1;
+            if (mapIndex >= PREDEFINED_MAPS.length) mapIndex = PREDEFINED_MAPS.length - 1;
+
+            const layout = PREDEFINED_MAPS[mapIndex];
+            ROWS = layout.length;
+            COLS = layout[0].length;
+
+            mapData = Array(ROWS).fill(null).map(() => Array(COLS).fill(1));
+            dots = [];
+            stars = [];
+            enemies = [];
+            particles = [];
+
+            for (let y = 0; y < ROWS; y++) {
+                let row = layout[y];
+                for (let x = 0; x < COLS; x++) {
+                    let char = row[x];
+                    if (char === '1') {
+                        mapData[y][x] = 1;
+                    } else {
+                        mapData[y][x] = 0;
+                        if (char === 'P') {
+                            player.x = x;
+                            player.y = y;
+                        } else if (char === 'E') {
+                            exitPortal = { x, y };
+                        } else if (char === '.') {
+                            dots.push({ x, y, collected: false });
+                        } else if (char === '*') {
+                            stars.push({ x, y, collected: false, rot: Math.random() * Math.PI });
+                        } else if (char === '-') {
+                            enemies.push({
+                                x, y,
+                                px: x * TILE_SIZE,
+                                py: y * TILE_SIZE,
+                                vx: 1, vy: 0,
+                                facingX: 1,
+                                wingPhase: Math.random() * Math.PI,
+                                size: TILE_SIZE * 0.7
+                            });
+                        }
+                    }
+                }
+            }
+
+            player.px = player.x * TILE_SIZE;
+            player.py = player.y * TILE_SIZE;
+            player.vx = 0;
+            player.vy = 0;
+            player.isMoving = false;
+            player.queuedDir = null;
+        }
+
+        function isWall(x, y) {
+            if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return true;
+            return mapData[y][x] === 1;
+        }
+
+        function requestMove(dx, dy) {
+            if (gameState !== 'playing') return;
+            if (dx !== 0) player.facingX = dx > 0 ? 1 : -1;
+
+            // If player is stationary, initiate sliding immediately
+            if (!player.isMoving) {
+                if (!isWall(player.x + dx, player.y + dy)) {
+                    player.vx = dx;
+                    player.vy = dy;
+                    player.isMoving = true;
+                    AudioSys.play('dash');
+                }
+            } else {
+                // If already moving, buffer the queued turn so player immediately turns at next opening
+                player.queuedDir = { dx, dy };
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'KeyW'].includes(e.code)) { requestMove(0, -1); e.preventDefault(); }
+            if (['ArrowDown', 'KeyS'].includes(e.code)) { requestMove(0, 1); e.preventDefault(); }
+            if (['ArrowLeft', 'KeyA'].includes(e.code)) { requestMove(-1, 0); e.preventDefault(); }
+            if (['ArrowRight', 'KeyD'].includes(e.code)) { requestMove(1, 0); e.preventDefault(); }
+        });
+
+        canvas.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
+
+        canvas.addEventListener('touchend', e => {
+            if (gameState !== 'playing') return;
+            let dx = e.changedTouches[0].screenX - touchStartX;
+            let dy = e.changedTouches[0].screenY - touchStartY;
+
+            if (Math.abs(dx) > 25 || Math.abs(dy) > 25) {
+                if (Math.abs(dx) > Math.abs(dy)) requestMove(dx > 0 ? 1 : -1, 0);
+                else requestMove(0, dy > 0 ? 1 : -1);
+            }
+        });
+
+        function addSparkles(x, y, color = '#ffdb4d', count = 8) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spd = 50 + Math.random() * 120;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd,
+                    life: 0.4 + Math.random() * 0.3,
+                    maxLife: 0.7,
+                    size: 2 + Math.random() * 3,
+                    color: color
+                });
+            }
+        }
+
+        function update(dt) {
+            if (gameState !== 'playing') return;
+
+            // Invincibility Timer
+            if (isMultiplierActive) {
+                multiplierTimer -= dt;
+                uiTimer.innerText = Math.max(0, multiplierTimer / 1000).toFixed(1);
+                if (multiplierTimer <= 0) {
+                    isMultiplierActive = false;
+                    uiMultiplier.classList.add('hidden');
+                }
+            }
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.life -= (dt / 1000);
+                p.x += p.vx * (dt / 1000);
+                p.y += p.vy * (dt / 1000);
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Player sliding movement with responsive turning at openings
+            if (player.isMoving) {
+                const speed = 720 * (dt / 1000);
+                let targetPx = player.x * TILE_SIZE;
+                let targetPy = player.y * TILE_SIZE;
+
+                if (Math.abs(player.px - targetPx) <= speed && Math.abs(player.py - targetPy) <= speed) {
+                    player.px = targetPx;
+                    player.py = targetPy;
+
+                    // Check if player requested a turn into an open perpendicular corridor
+                    if (player.queuedDir) {
+                        const { dx, dy } = player.queuedDir;
+                        if (!isWall(player.x + dx, player.y + dy)) {
+                            player.vx = dx;
+                            player.vy = dy;
+                            if (dx !== 0) player.facingX = dx > 0 ? 1 : -1;
+                            player.queuedDir = null;
+                            AudioSys.play('dash');
+                        }
+                    }
+
+                    // Step to next grid cell
+                    player.x += player.vx;
+                    player.y += player.vy;
+
+                    // Hit wall check
+                    if (isWall(player.x, player.y)) {
+                        player.x -= player.vx;
+                        player.y -= player.vy;
+                        player.px = player.x * TILE_SIZE;
+                        player.py = player.y * TILE_SIZE;
+                        player.vx = 0;
+                        player.vy = 0;
+                        player.isMoving = false;
+                        player.queuedDir = null;
+                        addSparkles(player.px + TILE_SIZE/2, player.py + TILE_SIZE/2, '#ffffff', 4);
+                    }
+                } else {
+                    player.px += player.vx * speed;
+                    player.py += player.vy * speed;
+                }
+                checkCollisions();
+            }
+
+            // Patrol Bat Enemy AI
+            const enemySpeed = 160 * (dt / 1000);
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let en = enemies[i];
+                en.wingPhase += (dt / 1000) * 16;
+                let targetPx = en.x * TILE_SIZE;
+                let targetPy = en.y * TILE_SIZE;
+
+                if (Math.abs(en.px - targetPx) <= enemySpeed && Math.abs(en.py - targetPy) <= enemySpeed) {
+                    en.px = targetPx;
+                    en.py = targetPy;
+                    if (isWall(en.x + en.vx, en.y + en.vy)) {
+                        en.vx *= -1;
+                        en.vy *= -1;
+                        en.facingX = en.vx > 0 ? 1 : -1;
+                    } else {
+                        en.x += en.vx;
+                        en.y += en.vy;
+                    }
+                } else {
+                    en.px += en.vx * enemySpeed;
+                    en.py += en.vy * enemySpeed;
+                }
+
+                // Player vs Bat collision
+                const hitDist = TILE_SIZE * 0.65;
+                if (Math.abs(en.px - player.px) < hitDist && Math.abs(en.py - player.py) < hitDist) {
+                    if (isMultiplierActive) {
+                        enemies.splice(i, 1);
+                        score += 80;
+                        uiScore.innerText = score;
+                        AudioSys.play('hit');
+                        addSparkles(en.px + TILE_SIZE/2, en.py + TILE_SIZE/2, '#f43f5e', 20);
+                    } else {
+                        gameOver();
+                    }
+                }
+            }
+
+            // Exit Portal Reach
+            if (!player.isMoving && player.x === exitPortal.x && player.y === exitPortal.y) {
+                score += 200;
+                AudioSys.play('power');
+                addSparkles(player.px + TILE_SIZE/2, player.py + TILE_SIZE/2, '#10b981', 25);
+                if (level >= MAX_LEVEL) {
+                    gameClear();
+                } else {
+                    level++;
+                    uiScore.innerText = score;
+                    uiLevel.innerText = level;
+                    isMultiplierActive = true;
+                    multiplierTimer = MULTIPLIER_DURATION;
+                    uiMultiplier.classList.remove('hidden');
+                    generateMap();
+                }
+            }
+        }
+
+        function checkCollisions() {
+            // Coins
+            for (let i = 0; i < dots.length; i++) {
+                let d = dots[i];
+                if (!d.collected && player.x === d.x && player.y === d.y) {
+                    d.collected = true;
+                    score += isMultiplierActive ? 20 : 10;
+                    uiScore.innerText = score;
+                    AudioSys.play('coin');
+                    addSparkles(d.x * TILE_SIZE + TILE_SIZE/2, d.y * TILE_SIZE + TILE_SIZE/2, '#fbbf24', 4);
+                }
+            }
+
+            // Wisdom Relic Stars
+            for (let i = 0; i < stars.length; i++) {
+                let s = stars[i];
+                if (!s.collected && player.x === s.x && player.y === s.y) {
+                    s.collected = true;
+                    AudioSys.play('star');
+                    addSparkles(s.x * TILE_SIZE + TILE_SIZE/2, s.y * TILE_SIZE + TILE_SIZE/2, '#38bdf8', 15);
+                    showQuestion();
+                }
+            }
+        }
+
+        function showQuestion() {
+            gameState = 'question';
+            const randomQ = QUESTION_DATABASE[Math.floor(Math.random() * QUESTION_DATABASE.length)];
+            document.getElementById('question-text').innerText = randomQ.q;
+
+            // Randomized option shuffling
+            let shuffled = [...randomQ.options];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            const ansContainer = document.getElementById('answers-container');
+            ansContainer.innerHTML = '';
+
+            shuffled.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.className = 'ans-btn';
+                btn.innerText = opt;
+                btn.onclick = () => {
+                    document.getElementById('question-screen').classList.add('hidden');
+                    if (opt === randomQ.correct) {
+                        isMultiplierActive = true;
+                        multiplierTimer = MULTIPLIER_DURATION;
+                        uiMultiplier.classList.remove('hidden');
+                        score += 50;
+                        uiScore.innerText = score;
+                        AudioSys.play('power');
+                    }
+                    gameState = 'playing';
+                };
+                ansContainer.appendChild(btn);
+            });
+
+            document.getElementById('question-screen').classList.remove('hidden');
+        }
+
+        function render() {
+            ctx.fillStyle = '#050407';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (gameState !== 'playing' && gameState !== 'question') return;
+
+            let camX = player.px - canvas.width / 2 + TILE_SIZE / 2;
+            let camY = player.py - canvas.height / 2 + TILE_SIZE / 2;
+
+            ctx.save();
+            ctx.translate(-camX, -camY);
+
+            // 1. Ancient Tomb Floor Tiles
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    const fx = x * TILE_SIZE;
+                    const fy = y * TILE_SIZE;
+                    ctx.fillStyle = (x + y) % 2 === 0 ? '#110d18' : '#0d0a14';
+                    ctx.fillRect(fx, fy, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+                    ctx.strokeRect(fx, fy, TILE_SIZE, TILE_SIZE);
+                }
+            }
+
+            // 2. Realistic 3D Stone Walls with Engraved Hieroglyphs
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (mapData[y][x] === 1) {
+                        const wx = x * TILE_SIZE;
+                        const wy = y * TILE_SIZE;
+
+                        // Stone block body
+                        const wallGrad = ctx.createLinearGradient(wx, wy, wx, wy + TILE_SIZE);
+                        wallGrad.addColorStop(0, '#2d1b38');
+                        wallGrad.addColorStop(0.7, '#1c1024');
+                        wallGrad.addColorStop(1, '#0e0813');
+                        ctx.fillStyle = wallGrad;
+                        ctx.fillRect(wx, wy, TILE_SIZE, TILE_SIZE);
+
+                        // 3D Top-lit stone bevels
+                        ctx.fillStyle = 'rgba(244, 63, 94, 0.6)';
+                        ctx.fillRect(wx, wy, TILE_SIZE, 3);
+                        ctx.fillRect(wx, wy, 3, TILE_SIZE);
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                        ctx.fillRect(wx, wy + TILE_SIZE - 3, TILE_SIZE, 3);
+                        ctx.fillRect(wx + TILE_SIZE - 3, wy, 3, TILE_SIZE);
+
+                        // Engraved code rune glyph
+                        ctx.fillStyle = 'rgba(251, 191, 36, 0.22)';
+                        ctx.font = '10px monospace';
+                        const rune = (x * 7 + y * 13) % 4 === 0 ? '{ }' : ((x + y) % 3 === 0 ? '</>' : '✦');
+                        ctx.fillText(rune, wx + TILE_SIZE/2 - 7, wy + TILE_SIZE/2 + 3);
+                    }
+                }
+            }
+
+            // 3. Dimensional Stargate Portal
+            const portalX = exitPortal.x * TILE_SIZE + TILE_SIZE/2;
+            const portalY = exitPortal.y * TILE_SIZE + TILE_SIZE/2;
+            const time = Date.now() / 1000;
+
+            ctx.save();
+            ctx.translate(portalX, portalY);
+            ctx.rotate(time * 2);
+            ctx.shadowColor = '#10b981';
+            ctx.shadowBlur = 15;
+            ctx.strokeStyle = '#34d399';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-TILE_SIZE * 0.35, -TILE_SIZE * 0.35, TILE_SIZE * 0.7, TILE_SIZE * 0.7);
+            ctx.rotate(-time * 4);
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+            ctx.beginPath();
+            ctx.arc(0, 0, TILE_SIZE * 0.28, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.restore();
+
+            // 4. Rotating Ancient Gold Coins
+            dots.forEach(d => {
+                if (!d.collected) {
+                    const cx = d.x * TILE_SIZE + TILE_SIZE / 2;
+                    const cy = d.y * TILE_SIZE + TILE_SIZE / 2;
+                    const spinScale = Math.abs(Math.sin(time * 3 + d.x + d.y));
+
+                    ctx.save();
+                    ctx.translate(cx, cy);
+                    ctx.scale(spinScale, 1);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fef08a';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            });
+
+            // 5. Wisdom Relic Stars
+            stars.forEach(s => {
+                if (!s.collected) {
+                    const sx = s.x * TILE_SIZE + TILE_SIZE / 2;
+                    const sy = s.y * TILE_SIZE + TILE_SIZE / 2 + Math.sin(time * 4 + s.x) * 3;
+
+                    ctx.save();
+                    ctx.translate(sx, sy);
+                    ctx.rotate(time * 1.5);
+                    ctx.shadowColor = '#38bdf8';
+                    ctx.shadowBlur = 12;
+                    ctx.fillStyle = '#0284c7';
+                    ctx.beginPath();
+                    for (let i = 0; i < 5; i++) {
+                        ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * 10, -Math.sin((18 + i * 72) * Math.PI / 180) * 10);
+                        ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * 4.5, -Math.sin((54 + i * 72) * Math.PI / 180) * 4.5);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    ctx.restore();
+                }
+            });
+
+            // 6. Realistic Gargoyle / Vampire Bats
+            enemies.forEach(en => {
+                const ex = en.px + TILE_SIZE / 2;
+                const ey = en.py + TILE_SIZE / 2 + Math.sin(en.wingPhase) * 2;
+                const flap = Math.sin(en.wingPhase);
+
+                ctx.save();
+                ctx.translate(ex, ey);
+
+                // Flapping Leathery Wings
+                ctx.fillStyle = '#4c1d95';
+                ctx.beginPath();
+                // Left wing
+                ctx.moveTo(-4, -2);
+                ctx.quadraticCurveTo(-14, -14 * flap, -20, -4 * flap);
+                ctx.quadraticCurveTo(-12, 6, -4, 4);
+                // Right wing
+                ctx.moveTo(4, -2);
+                ctx.quadraticCurveTo(14, -14 * flap, 20, -4 * flap);
+                ctx.quadraticCurveTo(12, 6, 4, 4);
+                ctx.fill();
+
+                // Bat Body
+                ctx.fillStyle = '#2e1065';
+                ctx.beginPath();
+                ctx.arc(0, 0, 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Glowing Menacing Red Eyes
+                ctx.fillStyle = '#ef4444';
+                ctx.shadowColor = '#dc2626';
+                ctx.shadowBlur = 6;
+                const eyeDir = en.facingX * 2;
+                ctx.fillRect(-3 + eyeDir, -2, 2, 2);
+                ctx.fillRect(1 + eyeDir, -2, 2, 2);
+                ctx.shadowBlur = 0;
+
+                ctx.restore();
+            });
+
+            // 7. Floating Particles
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life / p.maxLife;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 8. Player Rendering
+            const plX = player.px + TILE_SIZE / 2;
+            const plY = player.py + TILE_SIZE / 2;
+
+            // Invincible Supercharged Aura
+            if (isMultiplierActive) {
+                ctx.save();
+                ctx.translate(plX, plY);
+                ctx.rotate(time * 5);
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 3;
+                ctx.shadowColor = '#fbbf24';
+                ctx.shadowBlur = 18;
+                ctx.strokeRect(-TILE_SIZE * 0.45, -TILE_SIZE * 0.45, TILE_SIZE * 0.9, TILE_SIZE * 0.9);
+                ctx.restore();
+            }
+
+            // Draw chosen high-detail character
+            const charDef = CHARACTERS[selectedCharKey] || CHARACTERS['pharaoh'];
+            charDef.draw(ctx, plX, plY, player.size, player.facingX, player.isMoving, time);
+
+            ctx.restore();
+
+            // 9. Balanced Tomb Atmospheric Fog & Torchlight (ปรับความสว่างให้พอดี มองเห็นเส้นทางได้ชัดเจน)
+            const screenPlX = canvas.width / 2;
+            const screenPlY = canvas.height / 2;
+            
+            // แสงคบเพลิงกว้างพอดี มองเห็นทางเดินและเลี้ยวสะดวก
+            const torchFlicker = Math.sin(time * 6) * 4 + Math.cos(time * 11) * 3;
+            const baseRadius = isMultiplierActive ? 340 : 230; // ขยายรัศมีแสงให้กว้างขึ้น
+            const innerRadius = (baseRadius * 0.5) + torchFlicker;
+            const outerRadius = (baseRadius * 1.25) + torchFlicker;
+
+            ctx.save();
+            // ปรับระดับความมืดเป็นแบบเงาสลัวรอบนอก (ประมาณ 75-80%) ไม่มืดสนิทจนมองไม่เห็นทาง
+            const fogOfWar = ctx.createRadialGradient(
+                screenPlX, screenPlY, innerRadius,
+                screenPlX, screenPlY, outerRadius
+            );
+            fogOfWar.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            fogOfWar.addColorStop(0.45, 'rgba(4, 3, 8, 0.15)');
+            fogOfWar.addColorStop(0.8, 'rgba(4, 3, 8, 0.55)');
+            fogOfWar.addColorStop(1, 'rgba(4, 3, 8, 0.78)'); // สลัวกำลังดี ช่วยสร้างบรรยากาศแต่ยังมองเห็นกำแพงรอบๆ
+
+            ctx.fillStyle = fogOfWar;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // แสงนวลทองจากคบเพลิงส่องสว่างบริเวณทางเดินของผู้เล่น
+            const warmGlow = ctx.createRadialGradient(
+                screenPlX, screenPlY, 8,
+                screenPlX, screenPlY, innerRadius * 1.3
+            );
+            warmGlow.addColorStop(0, isMultiplierActive ? 'rgba(251, 191, 36, 0.28)' : 'rgba(245, 158, 11, 0.20)');
+            warmGlow.addColorStop(0.7, isMultiplierActive ? 'rgba(245, 158, 11, 0.08)' : 'rgba(217, 119, 6, 0.05)');
+            warmGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = warmGlow;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+        }
+
+        function gameLoop(timestamp) {
+            let dt = timestamp - lastTime;
+            if (isNaN(dt) || dt > 100) dt = 16;
+            lastTime = timestamp;
+            update(dt);
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            const nameInput = document.getElementById('playerNameInput').value.trim();
+            if (nameInput) playerName = nameInput;
+
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            document.getElementById('game-clear-screen').classList.add('hidden');
+
+            score = 0;
+            level = 1;
+            uiScore.innerText = score;
+            uiLevel.innerText = level;
+            isMultiplierActive = false;
+            uiMultiplier.classList.add('hidden');
+
+            generateMap();
+            gameState = 'playing';
+            AudioSys.play('power');
+        }
+
+        function gameClear() {
+            gameState = 'gameclear';
+            document.getElementById('game-clear-screen').classList.remove('hidden');
+            score += 500;
+            document.getElementById('clear-score').innerText = score;
+            uiScore.innerText = score;
+            const chosenChar = CHARACTERS[selectedCharKey]?.name || "Explorer";
+            if (score > 0 && window.saveGameScore) window.saveGameScore(playerName, score, 5, chosenChar);
+        }
+
+        function gameOver() {
+            gameState = 'gameover';
+            document.getElementById('game-over-screen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+            AudioSys.play('hit');
+            const chosenChar = CHARACTERS[selectedCharKey]?.name || "Explorer";
+            if (score > 0 && window.saveGameScore) window.saveGameScore(playerName, score, level, chosenChar);
+        }
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+        document.getElementById('playAgainBtn').addEventListener('click', startGame);
+
+        document.getElementById('menuBtnClear').addEventListener('click', () => {
+            document.getElementById('game-clear-screen').classList.add('hidden');
+            document.getElementById('menu-screen').classList.remove('hidden');
+            gameState = 'menu';
+        });
+
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            document.getElementById('game-over-screen').classList.add('hidden');
+            document.getElementById('menu-screen').classList.remove('hidden');
+            gameState = 'menu';
+        });
+
+        document.getElementById('leaderboardBtn').addEventListener('click', () => {
+            document.getElementById('leaderboard-screen').classList.remove('hidden');
+            if (window.loadLeaderboard) window.loadLeaderboard();
+        });
+
+        document.getElementById('closeLeaderboardBtn').addEventListener('click', () => {
+            document.getElementById('leaderboard-screen').classList.add('hidden');
+        });
+
+        // Question Manager Modal Handlers
+        const openAddQBtn = document.getElementById('openAddQBtn');
+        const addQScreen = document.getElementById('add-question-screen');
+        const cancelAddQBtn = document.getElementById('cancelAddQBtn');
+        const saveQBtn = document.getElementById('saveQBtn');
+
+        if (openAddQBtn) {
+            openAddQBtn.addEventListener('click', () => {
+                addQScreen.classList.remove('hidden');
+            });
+        }
+
+        if (cancelAddQBtn) {
+            cancelAddQBtn.addEventListener('click', () => {
+                addQScreen.classList.add('hidden');
+            });
+        }
+
+        if (saveQBtn) {
+            saveQBtn.addEventListener('click', async () => {
+                const qText = document.getElementById('newQText').value.trim();
+                const correct = document.getElementById('newQCorrect').value.trim();
+                const o1 = document.getElementById('newQOpt1').value.trim();
+                const o2 = document.getElementById('newQOpt2').value.trim();
+                const o3 = document.getElementById('newQOpt3').value.trim();
+
+                if (!qText || !correct || !o1) {
+                    alert("กรุณากรอกคำถาม คำตอบที่ถูกต้อง และตัวเลือกลวงอย่างน้อย 1 ข้อ");
+                    return;
+                }
+
+                const options = [correct, o1];
+                if (o2) options.push(o2);
+                if (o3) options.push(o3);
+
+                const newQuestion = { q: qText, options: options, correct: correct };
+                if (window.addQuestionToCloud) {
+                    await window.addQuestionToCloud(newQuestion);
+                }
+
+                // Reset form
+                document.getElementById('newQText').value = '';
+                document.getElementById('newQCorrect').value = '';
+                document.getElementById('newQOpt1').value = '';
+                document.getElementById('newQOpt2').value = '';
+                document.getElementById('newQOpt3').value = '';
+                addQScreen.classList.add('hidden');
+                AudioSys.play('power');
+            });
+        }
+
+        // Initialize setup
+        initCharSelectUI();
+        resize();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
